@@ -1,27 +1,27 @@
-package admin_server.beans;
+package admin_server;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
-public class RobotRepr {
+public class RobotRepresentation {
 
-    private int id;
+    private String id;
     private String address;
     private int port;
 
-    public RobotRepr(){}
+    public RobotRepresentation(){}
 
-    public RobotRepr(int id, String address, int port) {
+    public RobotRepresentation(String id, String address, int port) {
         this.id = id;
         this.address = address;
         this.port = port;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -39,5 +39,10 @@ public class RobotRepr {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    @Override
+    public String toString() {
+        return "R_" + getId();
     }
 }

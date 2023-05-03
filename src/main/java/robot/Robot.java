@@ -1,34 +1,19 @@
 package robot;
 
-import admin_server.beans.RobotRepr;
+import admin_server.RobotRepresentation;
 import com.google.gson.Gson;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 
-import java.util.Scanner;
-
 public class Robot {
 
-    public static void main(String[] args) {
-
-        Scanner s = new Scanner(System.in);
-
-        System.out.println("Insert ID of new cleaning robot: ");
-        int id = s.nextInt();
-        System.out.println("Insert listening port of new cleaning robot: ");
-        int listeningPort = s.nextInt();
-
-        Robot r = new Robot(id, listeningPort, "http://localhost:1337");
-        r.registration();
-    }
-
-    private int id;
+    private String id;
     private int listeningPort;
     private String adminServerAddress;
 
-    public Robot(int id, int listeningPort, String adminServerAddress){
+    public Robot(String id, int listeningPort, String adminServerAddress){
         this.id = id;
         this.listeningPort = listeningPort;
         this.adminServerAddress = adminServerAddress;
@@ -43,12 +28,12 @@ public class Robot {
         String postPath = "/robots/register";
         clientResponse = postRegistrationRequest(client,
                 adminServerAddress + postPath,
-                new RobotRepr(id, "localhost", listeningPort));
+                new RobotRepresentation(id, "localhost", listeningPort));
 
         System.out.println(clientResponse.toString());
     }
 
-    public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepr req){
+    public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepresentation req){
         WebResource webResource = client.resource(url);
         String input = new Gson().toJson(req);
         try {

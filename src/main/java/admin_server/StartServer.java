@@ -4,17 +4,17 @@ import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 
+import static utils.Utils.ADMIN_SERVER_ADDRESS;
+
 public class StartServer {
 
-    private static final String HOST = "localhost";
-    private static final int PORT = 1337;
-
     public static void main(String[] args) throws IOException {
-        HttpServer server = HttpServerFactory.create("http://"+HOST+":"+PORT+"/");
+
+        HttpServer server = HttpServerFactory.create(ADMIN_SERVER_ADDRESS+"/");
         server.start();
 
         System.out.println("Server running!");
-        System.out.println("Server started on: http://"+HOST+":"+PORT);
+        System.out.println("Server started on: " + ADMIN_SERVER_ADDRESS);
 
         System.out.println("Hit return to stop...");
         System.in.read();
