@@ -36,12 +36,24 @@ public class SmartCity {
         for (Map.Entry<District, List<RobotRepresentation>> entry : registeredRobots.entrySet())
             for (RobotRepresentation x : entry.getValue())
                 if (Objects.equals(x.getId(), r.getId()))
-                    throw new RuntimeException("duplicated ID");
+                    throw new RuntimeException("Registration failure, duplicated ID");
 
         // assigning r to some district
         District newRobotDistrict = chooseNewRobotDistrict();
         registeredRobots.get(newRobotDistrict).add(r);
         return newRobotDistrict;
+    }
+
+    public synchronized void remove(String id) {
+
+        // removing robot
+        for (Map.Entry<District, List<RobotRepresentation>> entry : registeredRobots.entrySet())
+            for (RobotRepresentation x : entry.getValue())
+                if (Objects.equals(x.getId(), id)){
+                    entry.getValue().remove(x);
+                    return;
+                }
+        throw new RuntimeException("Removal failure, ID not present");
     }
 
     private District chooseNewRobotDistrict() {

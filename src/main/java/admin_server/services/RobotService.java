@@ -4,6 +4,7 @@ import admin_server.District;
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
 import admin_server.SmartCity;
+import com.google.gson.Gson;
 
 import static admin_server.RobotPosition.generateRobotPosition;
 import static utils.Printer.*;
@@ -20,6 +21,7 @@ public class RobotService {
     @Path("register")
     @POST
     @Consumes({"application/json", "application/xml"})
+    @Produces({"application/json", "application/xml"})
     public Response registerRobot(RobotRepresentation r) {
 
         logln("Registration request arrived ... ID: " + r.getId() +
@@ -30,31 +32,39 @@ public class RobotService {
         try {
             districtAssignment = city.add(r);
         } catch (Exception e) {
-            warn("Duplicated ID, registration failed");
+            warn(e.getMessage());
             return Response.status(404).build();
         }
 
         // building registration response
         RobotPosition position = generateRobotPosition(districtAssignment);
-
-        /*logln("All robots: " + city.getRobotsList());*/
-
         List<RobotRepresentation> otherRobots = city.getRobotsList();
-        for (RobotRepresentation x : otherRobots){
+        for (RobotRepresentation x : otherRobots) {
             if (Objects.equals(x.getId(), r.getId())) {
                 otherRobots.remove(x);
                 break;
             }
         }
-        /*
-        logln("Other robots: " + otherRobots);
-        RegistrationResponse response = new RegistrationResponse(position, otherRobots);
-        logln("Robot assigned to " + districtAssignment + " at position " + response.getPosition());
-        logln("Other robots from response: " + response.getOtherRobots());
-        logln();
-        */
-        logln("Registration succeded\n");
+        successln("Registration succeded\n");
         return Response.ok(new RegistrationResponse(position, otherRobots)).build();
     }
 
+    @Path("remove")
+    @DELETE
+    @Consumes({"application/json", "application/xml"})
+    public Response removeRobot(String id) {
+
+        logln("Removal request arrived ... ID: " + id);
+
+        try {
+            SmartCity.getInstance().remove(id);
+        } catch (Exception e) {
+            warn(e.getMessage());
+            return Response.status(404).build();
+        }
+        successln("Removal succeded\n");
+        return Response.ok().build();
+    }
 }
+
+
