@@ -9,7 +9,8 @@ public class RobotRepresentation {
     private String address;
     private int port;
 
-    public RobotRepresentation(){}
+    private RobotRepresentation() {
+    }
 
     public RobotRepresentation(String id, String address, int port) {
         this.id = id;
