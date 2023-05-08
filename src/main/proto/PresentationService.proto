@@ -1,0 +1,18 @@
+syntax = "proto3";
+package com.example.grpc;
+
+message PresentationRequest {
+  string id = 1;
+  int32 port = 2;
+  message Position {
+    int32 x = 1;
+    int32 y = 2;
+  }
+  Position position = 3;
+}
+
+message PresentationResponse {}
+
+service PresentationService {
+  rpc presentation(PresentationRequest) returns (PresentationResponse);
+}

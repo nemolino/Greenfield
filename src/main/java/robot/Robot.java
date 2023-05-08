@@ -1,21 +1,29 @@
 package robot;
 
-import static utils.Printer.*;
-
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
 import admin_server.services.RegistrationResponse;
+import com.example.grpc.PresentationServiceGrpc;
+import com.example.grpc.PresentationServiceGrpc.PresentationServiceStub;
+import com.example.grpc.PresentationServiceOuterClass.PresentationRequest;
+import com.example.grpc.PresentationServiceOuterClass.PresentationResponse;
 import com.google.gson.Gson;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static utils.Printer.errorln;
+import static utils.Printer.successln;
 
 public class Robot {
 
@@ -24,6 +32,7 @@ public class Robot {
     private String adminServerAddress;
     private RobotPosition position;
     private List<RobotRepresentation> otherRobots;
+    private Object otherRobotsLock = new Object();
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
@@ -31,8 +40,16 @@ public class Robot {
         this.adminServerAddress = adminServerAddress;
     }
 
+    public Object getOtherRobotsLock() {
+        return otherRobotsLock;
+    }
+
     public RobotPosition getPosition() {
         return position;
+    }
+
+    public int getListeningPort() {
+        return listeningPort;
     }
 
     public List<RobotRepresentation> getOtherRobots() {
@@ -68,12 +85,60 @@ public class Robot {
         ClientResponse clientResponse = null;
 
         String postPath = "/robots/remove";
-        clientResponse = deleteRemovalRequest(client,adminServerAddress + postPath, this.id);
+        clientResponse = deleteRemovalRequest(client, adminServerAddress + postPath, this.id);
 
-        logln("Removal response: " + clientResponse.toString());
+        //logln("Removal response: " + clientResponse.toString());
 
         if (clientResponse.getStatus() != 200)
             throw new RemovalFailureException("Removal failure");
+    }
+
+    public void presentation() {
+
+        List<ManagedChannel> channels = new ArrayList<>();
+
+        synchronized (this.otherRobotsLock) {
+            for (RobotRepresentation x : this.otherRobots) {
+
+                final ManagedChannel channel = ManagedChannelBuilder
+                        .forTarget("localhost:" + x.getPort()).usePlaintext().build();
+
+                channels.add(channel);
+
+                PresentationServiceStub stub = PresentationServiceGrpc.newStub(channel);
+                PresentationRequest request = PresentationRequest.newBuilder()
+                        .setId(this.id)
+                        .setPort(this.listeningPort)
+                        .setPosition(PresentationRequest.Position.newBuilder()
+                                .setX(this.position.getX())
+                                .setY(this.position.getY())
+                                .build())
+                        .build();
+
+                stub.presentation(request, new StreamObserver<PresentationResponse>() {
+
+                    public void onNext(PresentationResponse helloResponse) {
+                        successln("Presentation to " + x + " succeded");
+                    }
+
+                    public void onError(Throwable throwable) {
+                        errorln("Error! " + throwable.getMessage());
+                    }
+
+                    public void onCompleted() {
+                        channel.shutdownNow();
+                    }
+                });
+            }
+        }
+
+        for (ManagedChannel ch : channels) {
+            try {
+                ch.awaitTermination(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepresentation req) {

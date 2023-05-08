@@ -4,14 +4,12 @@ import admin_server.District;
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
 import admin_server.SmartCity;
-import com.google.gson.Gson;
 
 import static admin_server.RobotPosition.generateRobotPosition;
 import static utils.Printer.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,8 +22,7 @@ public class RobotService {
     @Produces({"application/json", "application/xml"})
     public Response registerRobot(RobotRepresentation r) {
 
-        logln("Registration request arrived ... ID: " + r.getId() +
-                ", address: " + r.getAddress() + ", listeningPort: " + r.getPort());
+        logln("Registration request arrived for ID: " + r.getId());
 
         SmartCity city = SmartCity.getInstance();
         District districtAssignment;
@@ -45,6 +42,7 @@ public class RobotService {
                 break;
             }
         }
+
         successln("Registration succeded\n");
         return Response.ok(new RegistrationResponse(position, otherRobots)).build();
     }
@@ -54,7 +52,7 @@ public class RobotService {
     @Consumes({"application/json", "application/xml"})
     public Response removeRobot(String id) {
 
-        logln("Removal request arrived ... ID: " + id);
+        logln("Removal request arrived for ID: " + id);
 
         try {
             SmartCity.getInstance().remove(id);
@@ -62,6 +60,7 @@ public class RobotService {
             warn(e.getMessage());
             return Response.status(404).build();
         }
+
         successln("Removal succeded\n");
         return Response.ok().build();
     }

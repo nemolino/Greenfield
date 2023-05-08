@@ -1,8 +1,11 @@
 package robot;
 
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
+import java.io.IOException;
 import java.util.Scanner;
 
 import static utils.Printer.*;
@@ -14,14 +17,11 @@ public class RobotMainCLI {
     public static void main(String[] args) {
 
         Scanner s = new Scanner(System.in);
-        /* System.out.println("Insert ID of new cleaning robot: ");
-        int id = s.nextInt();
-        */
-        String id = generateRobotID();
-        logln("ID of new cleaning robot: " + id);
-        int listeningPort = 2; /* s.nextInt(); */
-        logln("listening port of new cleaning robot: " + listeningPort);
 
+        String id = args[0]; //generateRobotID();
+        logln("ID of new cleaning robot: " + id);
+        int listeningPort = Integer.valueOf(args[1]);
+        logln("listening port of new cleaning robot: " + listeningPort);
 
         Robot r = new Robot(id, listeningPort, ADMIN_SERVER_ADDRESS);
         try {
@@ -34,9 +34,25 @@ public class RobotMainCLI {
         logln("Position: " + r.getPosition().toString());
         logln("Other robots: " + r.getOtherRobots().toString());
 
-        // ... qua avvierò i vari thread nel robot ...
+        // ... starts acquiring data from its pollution sensor
 
-        System.out.println("Insert:\n\t\"quit\" to remove the robot from the smart city");
+        // setting up gRPC server
+        Server server = ServerBuilder.forPort(r.getListeningPort())
+                .addService(new PresentationServiceImpl(r))
+                .build();
+        try {
+            server.start();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        successln("gRPC server started!");
+        
+        // if there are other robots in Greenfield, presents itself to the other ones by sending them its position
+        r.presentation();
+
+        // ... connects as a publisher to the MQTT topic of its district
+
+        System.out.println("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){
             if (s.next().equals("quit")){
                 // TODO ... complete any operation at the mechanic
@@ -52,6 +68,12 @@ public class RobotMainCLI {
                 successln("Removal succeded");
                 break;
             }
+        }
+
+        try {
+            server.awaitTermination();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 }
