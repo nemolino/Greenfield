@@ -22,6 +22,7 @@ public class PresentationServiceImpl extends PresentationServiceImplBase {
                 " , listening at " + request.getPort() +
                 " and placed in (" + request.getPosition().getX() + "," + request.getPosition().getY() + ")" );
 
+        // update data structure
         synchronized (r.getOtherRobotsLock()) {
             r.getOtherRobots().add(new RobotRepresentation(request.getId(), "localhost", request.getPort()));
             logln(r.getOtherRobots().toString());

@@ -1,0 +1,12 @@
+syntax = "proto3";
+package com.example.grpc;
+
+message LeavingRequest {
+  string id = 1;
+}
+
+message LeavingResponse {}
+
+service LeavingService {
+  rpc leaving(LeavingRequest) returns (LeavingResponse);
+}

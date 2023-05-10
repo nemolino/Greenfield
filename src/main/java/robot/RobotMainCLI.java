@@ -39,6 +39,7 @@ public class RobotMainCLI {
         // setting up gRPC server
         Server server = ServerBuilder.forPort(r.getListeningPort())
                 .addService(new PresentationServiceImpl(r))
+                .addService(new LeavingServiceImpl(r))
                 .build();
         try {
             server.start();
@@ -55,8 +56,11 @@ public class RobotMainCLI {
         System.out.println("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){
             if (s.next().equals("quit")){
+
                 // TODO ... complete any operation at the mechanic
-                // TODO ... notify the other robots of Greenfield
+
+                // notify the other robots of Greenfield
+                r.leaving();
 
                 // request the Administrator Server to leave Greenfield
                 try {

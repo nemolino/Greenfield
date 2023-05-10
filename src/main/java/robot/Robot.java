@@ -3,10 +3,17 @@ package robot;
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
 import admin_server.services.RegistrationResponse;
+
 import com.example.grpc.PresentationServiceGrpc;
 import com.example.grpc.PresentationServiceGrpc.PresentationServiceStub;
 import com.example.grpc.PresentationServiceOuterClass.PresentationRequest;
 import com.example.grpc.PresentationServiceOuterClass.PresentationResponse;
+
+import com.example.grpc.LeavingServiceGrpc;
+import com.example.grpc.LeavingServiceGrpc.LeavingServiceStub;
+import com.example.grpc.LeavingServiceOuterClass.LeavingRequest;
+import com.example.grpc.LeavingServiceOuterClass.LeavingResponse;
+
 import com.google.gson.Gson;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -117,7 +124,7 @@ public class Robot {
 
                 stub.presentation(request, new StreamObserver<PresentationResponse>() {
 
-                    public void onNext(PresentationResponse helloResponse) {
+                    public void onNext(PresentationResponse response) {
                         successln("Presentation to " + x + " succeded");
                     }
 
@@ -132,13 +139,62 @@ public class Robot {
             }
         }
 
+        /*
         for (ManagedChannel ch : channels) {
             try {
                 ch.awaitTermination(10, TimeUnit.SECONDS);
+                System.out.println("fine canale");
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
+        */
+    }
+
+    public void leaving() {
+
+        List<ManagedChannel> channels = new ArrayList<>();
+
+        synchronized (this.otherRobotsLock) {
+            for (RobotRepresentation x : this.otherRobots) {
+
+                final ManagedChannel channel = ManagedChannelBuilder
+                        .forTarget("localhost:" + x.getPort()).usePlaintext().build();
+
+                channels.add(channel);
+
+                LeavingServiceStub stub = LeavingServiceGrpc.newStub(channel);
+                LeavingRequest request = LeavingRequest.newBuilder()
+                        .setId(this.id)
+                        .build();
+
+                stub.leaving(request, new StreamObserver<LeavingResponse>() {
+
+                    public void onNext(LeavingResponse response) {
+                        successln("I notified " + x + " that I'm leaving");
+                    }
+
+                    public void onError(Throwable throwable) {
+                        errorln("Error! " + throwable.getMessage());
+                    }
+
+                    public void onCompleted() {
+                        channel.shutdownNow();
+                    }
+                });
+            }
+        }
+
+        /*
+        for (ManagedChannel ch : channels) {
+            try {
+                ch.awaitTermination(10, TimeUnit.SECONDS);
+                System.out.println("fine canale");
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        */
     }
 
     public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepresentation req) {
