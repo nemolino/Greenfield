@@ -14,11 +14,8 @@ import com.example.grpc.LeavingServiceGrpc.LeavingServiceStub;
 import com.example.grpc.LeavingServiceOuterClass.LeavingRequest;
 import com.example.grpc.LeavingServiceOuterClass.LeavingResponse;
 
-import com.google.gson.Gson;
 import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -28,8 +25,8 @@ import utils.exceptions.RemovalFailureException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
+import static robot.RequestsHTTP.*;
 import static utils.Printer.*;
 
 public class Robot {
@@ -61,17 +58,14 @@ public class Robot {
         return listeningPort;
     }
 
-    public List<RobotRepresentation> getOtherRobots() {
-        return otherRobots;
-    }
+    public List<RobotRepresentation> getOtherRobots() { return otherRobots; }
 
     public void registration() throws RegistrationFailureException {
 
         Client client = Client.create();
-        ClientResponse clientResponse = null;
+        ClientResponse clientResponse;
 
-        String postPath = "/robots/register";
-        clientResponse = postRegistrationRequest(client, adminServerAddress + postPath,
+        clientResponse = postRegistrationRequest(client, adminServerAddress + "/robots/register",
                 new RobotRepresentation(id, "localhost", listeningPort));
 
         //logln("Registration response: " + clientResponse.toString());
@@ -91,10 +85,9 @@ public class Robot {
     public void removal(String leavingRobotId) throws RemovalFailureException {
 
         Client client = Client.create();
-        ClientResponse clientResponse = null;
+        ClientResponse clientResponse;
 
-        String postPath = "/robots/remove";
-        clientResponse = deleteRemovalRequest(client, adminServerAddress + postPath, leavingRobotId);
+        clientResponse = deleteRemovalRequest(client, adminServerAddress + "/robots/remove", leavingRobotId);
 
         //logln("Removal response: " + clientResponse.toString());
 
@@ -104,15 +97,11 @@ public class Robot {
 
     public void presentation() {
 
-        /*List<ManagedChannel> channels = new ArrayList<>();*/
-
         synchronized (this.otherRobotsLock) {
             for (RobotRepresentation x : this.otherRobots) {
 
                 final ManagedChannel channel = ManagedChannelBuilder
                         .forTarget("localhost:" + x.getPort()).usePlaintext().build();
-
-                /*channels.add(channel);*/
 
                 PresentationServiceStub stub = PresentationServiceGrpc.newStub(channel);
                 PresentationRequest request = PresentationRequest.newBuilder()
@@ -132,13 +121,12 @@ public class Robot {
 
                     public void onError(Throwable throwable) {
 
-                        errorln("Error! " + throwable.getMessage());
-                        errorln("Notifying otherRobots that " + x + " left the city!");
+                        errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
 
                         // removing x from otherRobots
                         synchronized (otherRobotsLock) {
-                            for (RobotRepresentation y : otherRobots){
-                                if (Objects.equals(y.getId(), x.getId())){
+                            for (RobotRepresentation y : otherRobots) {
+                                if (Objects.equals(y.getId(), x.getId())) {
                                     otherRobots.remove(x);
                                     break;
                                 }
@@ -164,22 +152,9 @@ public class Robot {
                 });
             }
         }
-
-        /*
-        for (ManagedChannel ch : channels) {
-            try {
-                ch.awaitTermination(10, TimeUnit.SECONDS);
-                System.out.println("fine canale");
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        */
     }
 
     public void leaving(String leavingRobotId) {
-
-        /*List<ManagedChannel> channels = new ArrayList<>();*/
 
         synchronized (this.otherRobotsLock) {
             for (RobotRepresentation x : this.otherRobots) {
@@ -187,19 +162,12 @@ public class Robot {
                 final ManagedChannel channel = ManagedChannelBuilder
                         .forTarget("localhost:" + x.getPort()).usePlaintext().build();
 
-                /*channels.add(channel);*/
-
                 LeavingServiceStub stub = LeavingServiceGrpc.newStub(channel);
                 LeavingRequest request;
                 if (Objects.equals(leavingRobotId, this.id))
-                    request = LeavingRequest.newBuilder()
-                            .setId(leavingRobotId)
-                            .build();
+                    request = LeavingRequest.newBuilder().setId(leavingRobotId).build();
                 else
-                    request = LeavingRequest.newBuilder()
-                            .setId(leavingRobotId)
-                            .setSender(this.id)
-                            .build();
+                    request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(this.id).build();
 
                 stub.leaving(request, new StreamObserver<LeavingResponse>() {
 
@@ -208,13 +176,13 @@ public class Robot {
                     }
 
                     public void onError(Throwable throwable) {
-                        errorln("Error! " + throwable.getMessage());
-                        errorln("Notifying otherRobots that " + x + " left the city!");
+
+                        errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
 
                         // removing x from otherRobots
                         synchronized (otherRobotsLock) {
-                            for (RobotRepresentation y : otherRobots){
-                                if (Objects.equals(y.getId(), x.getId())){
+                            for (RobotRepresentation y : otherRobots) {
+                                if (Objects.equals(y.getId(), x.getId())) {
                                     otherRobots.remove(x);
                                     break;
                                 }
@@ -225,7 +193,7 @@ public class Robot {
                         // removing x from AdminServer
                         try {
                             removal(x.getId());
-                            successln("Removing " + x + " also from AdminServer");
+                            errorln("Removing " + x + " also from AdminServer");
                         } catch (RemovalFailureException e) {
                             warnln("Someone already removed " + x + " from AdminServer");
                         }
@@ -234,43 +202,9 @@ public class Robot {
                         leaving(x.getId());
                     }
 
-                    public void onCompleted() {
-                        channel.shutdownNow();
-                    }
+                    public void onCompleted() { channel.shutdownNow(); }
                 });
             }
-        }
-
-        /*
-        for (ManagedChannel ch : channels) {
-            try {
-                ch.awaitTermination(10, TimeUnit.SECONDS);
-                System.out.println("fine canale");
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        */
-    }
-    public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepresentation req) {
-        WebResource webResource = client.resource(url);
-        String input = new Gson().toJson(req);
-        try {
-            return webResource.type("application/json").post(ClientResponse.class, input);
-        } catch (ClientHandlerException e) {
-            errorln("Server non disponibile");
-            return null;
-        }
-    }
-
-    public static ClientResponse deleteRemovalRequest(Client client, String url, String id) {
-        WebResource webResource = client.resource(url);
-        String input = id;
-        try {
-            return webResource.type("application/json").delete(ClientResponse.class, input);
-        } catch (ClientHandlerException e) {
-            errorln("Server non disponibile");
-            return null;
         }
     }
 }

@@ -1,9 +1,10 @@
-package robot;
+package robot.gRPC_services;
 
 import admin_server.RobotRepresentation;
 import com.example.grpc.PresentationServiceGrpc.PresentationServiceImplBase;
 import com.example.grpc.PresentationServiceOuterClass.*;
 import io.grpc.stub.StreamObserver;
+import robot.Robot;
 
 import static utils.Printer.log;
 import static utils.Printer.logln;
@@ -23,7 +24,7 @@ public class PresentationServiceImpl extends PresentationServiceImplBase {
                 " at port " + request.getPort() +
                 " placed in (" + request.getPosition().getX() + "," + request.getPosition().getY() + ")" );
 
-        // update data structure
+        // updating otherRobots
         synchronized (r.getOtherRobotsLock()) {
             r.getOtherRobots().add(new RobotRepresentation(request.getId(), "localhost", request.getPort()));
             logln("  | otherRobots: " + r.getOtherRobots());

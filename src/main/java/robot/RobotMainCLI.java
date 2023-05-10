@@ -2,14 +2,16 @@ package robot;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import robot.gRPC_services.LeavingServiceImpl;
+import robot.gRPC_services.PresentationServiceImpl;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
 import java.io.IOException;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import static utils.Printer.*;
-import static utils.Utils.generateRobotID;
 import static utils.Utils.ADMIN_SERVER_ADDRESS;
 
 public class RobotMainCLI {
@@ -19,9 +21,8 @@ public class RobotMainCLI {
         Scanner s = new Scanner(System.in);
 
         String id = args[0]; //generateRobotID();
-        logln("ID of new cleaning robot: " + id);
         int listeningPort = Integer.valueOf(args[1]);
-        logln("listening port of new cleaning robot: " + listeningPort);
+        cliln("robotID: " + id + " , port: " + listeningPort);
 
         Robot r = new Robot(id, listeningPort, ADMIN_SERVER_ADDRESS);
         try {
@@ -30,32 +31,32 @@ public class RobotMainCLI {
             errorln(e.toString());
             System.exit(-1);
         }
-        successln("Registration succeded");
-        logln("Position: " + r.getPosition().toString());
-        logln("otherRobots : " + r.getOtherRobots().toString());
+        success("Registration of this robot to AdminServer succeded");
+        logln(" --> Position: " + r.getPosition() + " , otherRobots: " + r.getOtherRobots());
 
         // ... starts acquiring data from its pollution sensor
 
         // setting up gRPC server
-        Server server = ServerBuilder.forPort(r.getListeningPort())
+        Server serverGRPC = ServerBuilder.forPort(r.getListeningPort())
                 .addService(new PresentationServiceImpl(r))
                 .addService(new LeavingServiceImpl(r))
                 .build();
         try {
-            server.start();
+            serverGRPC.start();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        successln("gRPC server started!");
+        logln("... gRPC server started!");
         
         // if there are other robots in Greenfield, presents itself to the other ones by sending them its position
         r.presentation();
 
         // ... connects as a publisher to the MQTT topic of its district
 
-        System.out.println("Insert:\t\t\"quit\" to remove the robot from the smart city");
+        cliln("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){
-            if (s.next().equals("quit")){
+            String input = s.next();
+            if (input.equals("quit")){
 
                 // TODO ... complete any operation at the mechanic
 
@@ -69,15 +70,17 @@ public class RobotMainCLI {
                     errorln(e.toString());
                     System.exit(-1);
                 }
-                successln("Removal succeded");
+                successln("Removal of this robot from AdminServer succeded");
+
+                try {
+                    // waiting 5 seconds for all the calls to be propagated
+                    serverGRPC.awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                serverGRPC.shutdown();
                 break;
             }
-        }
-
-        try {
-            server.awaitTermination();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
 }

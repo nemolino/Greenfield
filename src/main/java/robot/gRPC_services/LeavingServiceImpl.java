@@ -1,9 +1,10 @@
-package robot;
+package robot.gRPC_services;
 
 import admin_server.RobotRepresentation;
 import com.example.grpc.LeavingServiceGrpc.LeavingServiceImplBase;
 import com.example.grpc.LeavingServiceOuterClass.*;
 import io.grpc.stub.StreamObserver;
+import robot.Robot;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +27,7 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
                 " from R_" + (request.getSender().equals("") ? request.getId() : request.getSender()));
 
 
-        // update data structure
+        // updating otherRobots
         synchronized (r.getOtherRobotsLock()) {
             List<RobotRepresentation> others = r.getOtherRobots();
             for (RobotRepresentation x : others){

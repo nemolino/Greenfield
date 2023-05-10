@@ -1,11 +1,13 @@
 package utils;
 
 public final class Printer {
+
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_BLUE = "\u001B[34m";
     public static final String ANSI_YELLOW = "\u001B[33m";
     public static final String ANSI_RED = "\u001B[31m";
     public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_PURPLE_BG = "\u001B[45m";
 
     public static void logln(String s) {
         System.out.println(ANSI_BLUE + s + ANSI_RESET);
@@ -23,6 +25,8 @@ public final class Printer {
         System.out.println(ANSI_RED + s + ANSI_RESET);
     }
 
+    public static void cliln(String s) { System.out.println(ANSI_PURPLE_BG + s + ANSI_RESET); }
+
     public static void log(String s) {
         System.out.print(ANSI_BLUE + s + ANSI_RESET);
     }
@@ -38,6 +42,8 @@ public final class Printer {
     public static void error(String s) {
         System.out.print(ANSI_RED + s + ANSI_RESET);
     }
+
+    public static void cli(String s) { System.out.print(ANSI_PURPLE_BG + s + ANSI_RESET); }
 
     public static void logln() {
         System.out.println();
