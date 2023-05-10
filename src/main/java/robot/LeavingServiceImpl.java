@@ -8,6 +8,7 @@ import io.grpc.stub.StreamObserver;
 import java.util.List;
 import java.util.Objects;
 
+import static utils.Printer.log;
 import static utils.Printer.logln;
 
 public class LeavingServiceImpl extends LeavingServiceImplBase {
@@ -21,11 +22,12 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
     @Override
     public void leaving(LeavingRequest request, StreamObserver<LeavingResponse> responseObserver){
 
-        logln("Robot R_" + request.getId() + " is leaving");
+        log("Leaving notification for R_" + request.getId() +
+                " from R_" + (request.getSender().equals("") ? request.getId() : request.getSender()));
+
 
         // update data structure
         synchronized (r.getOtherRobotsLock()) {
-
             List<RobotRepresentation> others = r.getOtherRobots();
             for (RobotRepresentation x : others){
                 if (Objects.equals(x.getId(), request.getId())){
@@ -33,7 +35,7 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
                     break;
                 }
             }
-            logln(others.toString());
+            logln(" | otherRobots: " + others);
         }
 
         LeavingResponse response = LeavingResponse.newBuilder().build();

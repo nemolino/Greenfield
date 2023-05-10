@@ -27,25 +27,27 @@ import utils.exceptions.RemovalFailureException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static utils.Printer.errorln;
-import static utils.Printer.successln;
+import static utils.Printer.*;
 
 public class Robot {
 
-    private String id;
-    private int listeningPort;
-    private String adminServerAddress;
+    private final String id;
+    private final int listeningPort;
+    private final String adminServerAddress;
     private RobotPosition position;
     private List<RobotRepresentation> otherRobots;
-    private Object otherRobotsLock = new Object();
+    private final Object otherRobotsLock = new Object();
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
         this.listeningPort = listeningPort;
         this.adminServerAddress = adminServerAddress;
     }
+
+    public String getId() { return id; }
 
     public Object getOtherRobotsLock() {
         return otherRobotsLock;
@@ -86,13 +88,13 @@ public class Robot {
         }
     }
 
-    public void removal() throws RemovalFailureException {
+    public void removal(String leavingRobotId) throws RemovalFailureException {
 
         Client client = Client.create();
         ClientResponse clientResponse = null;
 
         String postPath = "/robots/remove";
-        clientResponse = deleteRemovalRequest(client, adminServerAddress + postPath, this.id);
+        clientResponse = deleteRemovalRequest(client, adminServerAddress + postPath, leavingRobotId);
 
         //logln("Removal response: " + clientResponse.toString());
 
@@ -102,7 +104,7 @@ public class Robot {
 
     public void presentation() {
 
-        List<ManagedChannel> channels = new ArrayList<>();
+        /*List<ManagedChannel> channels = new ArrayList<>();*/
 
         synchronized (this.otherRobotsLock) {
             for (RobotRepresentation x : this.otherRobots) {
@@ -110,7 +112,7 @@ public class Robot {
                 final ManagedChannel channel = ManagedChannelBuilder
                         .forTarget("localhost:" + x.getPort()).usePlaintext().build();
 
-                channels.add(channel);
+                /*channels.add(channel);*/
 
                 PresentationServiceStub stub = PresentationServiceGrpc.newStub(channel);
                 PresentationRequest request = PresentationRequest.newBuilder()
@@ -129,7 +131,31 @@ public class Robot {
                     }
 
                     public void onError(Throwable throwable) {
+
                         errorln("Error! " + throwable.getMessage());
+                        errorln("Notifying otherRobots that " + x + " left the city!");
+
+                        // removing x from otherRobots
+                        synchronized (otherRobotsLock) {
+                            for (RobotRepresentation y : otherRobots){
+                                if (Objects.equals(y.getId(), x.getId())){
+                                    otherRobots.remove(x);
+                                    break;
+                                }
+                            }
+                            errorln("otherRobots: " + otherRobots);
+                        }
+
+                        // removing x from AdminServer
+                        try {
+                            removal(x.getId());
+                            successln("Removing " + x + " also from AdminServer");
+                        } catch (RemovalFailureException e) {
+                            warnln("Someone already removed " + x + " from AdminServer");
+                        }
+
+                        // notifying remaining otherRobots that x left the city
+                        leaving(x.getId());
                     }
 
                     public void onCompleted() {
@@ -151,9 +177,9 @@ public class Robot {
         */
     }
 
-    public void leaving() {
+    public void leaving(String leavingRobotId) {
 
-        List<ManagedChannel> channels = new ArrayList<>();
+        /*List<ManagedChannel> channels = new ArrayList<>();*/
 
         synchronized (this.otherRobotsLock) {
             for (RobotRepresentation x : this.otherRobots) {
@@ -161,21 +187,51 @@ public class Robot {
                 final ManagedChannel channel = ManagedChannelBuilder
                         .forTarget("localhost:" + x.getPort()).usePlaintext().build();
 
-                channels.add(channel);
+                /*channels.add(channel);*/
 
                 LeavingServiceStub stub = LeavingServiceGrpc.newStub(channel);
-                LeavingRequest request = LeavingRequest.newBuilder()
-                        .setId(this.id)
-                        .build();
+                LeavingRequest request;
+                if (Objects.equals(leavingRobotId, this.id))
+                    request = LeavingRequest.newBuilder()
+                            .setId(leavingRobotId)
+                            .build();
+                else
+                    request = LeavingRequest.newBuilder()
+                            .setId(leavingRobotId)
+                            .setSender(this.id)
+                            .build();
 
                 stub.leaving(request, new StreamObserver<LeavingResponse>() {
 
                     public void onNext(LeavingResponse response) {
-                        successln("I notified " + x + " that I'm leaving");
+                        successln("I successfully notified " + x + " that " + leavingRobotId + " is leaving");
                     }
 
                     public void onError(Throwable throwable) {
                         errorln("Error! " + throwable.getMessage());
+                        errorln("Notifying otherRobots that " + x + " left the city!");
+
+                        // removing x from otherRobots
+                        synchronized (otherRobotsLock) {
+                            for (RobotRepresentation y : otherRobots){
+                                if (Objects.equals(y.getId(), x.getId())){
+                                    otherRobots.remove(x);
+                                    break;
+                                }
+                            }
+                            errorln("otherRobots: " + otherRobots);
+                        }
+
+                        // removing x from AdminServer
+                        try {
+                            removal(x.getId());
+                            successln("Removing " + x + " also from AdminServer");
+                        } catch (RemovalFailureException e) {
+                            warnln("Someone already removed " + x + " from AdminServer");
+                        }
+
+                        // notifying remaining otherRobots that x left the city (recursive)
+                        leaving(x.getId());
                     }
 
                     public void onCompleted() {
@@ -196,7 +252,6 @@ public class Robot {
         }
         */
     }
-
     public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepresentation req) {
         WebResource webResource = client.resource(url);
         String input = new Gson().toJson(req);

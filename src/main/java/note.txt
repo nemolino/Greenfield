@@ -1,0 +1,9 @@
+Posso evitare heartbeat?
+
+    Se mi presento a un robot che non c'è?
+    lo tolgo da otherRobots     + avviso il server (+ avviso gli altri)
+
+    Se dico che me ne sto andando a un robot che non c'è?
+    (lo tolgo da otherRobots)   + avviso il server  (+ avviso gli altri)
+
+

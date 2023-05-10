@@ -32,7 +32,7 @@ public class RobotMainCLI {
         }
         successln("Registration succeded");
         logln("Position: " + r.getPosition().toString());
-        logln("Other robots: " + r.getOtherRobots().toString());
+        logln("otherRobots : " + r.getOtherRobots().toString());
 
         // ... starts acquiring data from its pollution sensor
 
@@ -60,11 +60,11 @@ public class RobotMainCLI {
                 // TODO ... complete any operation at the mechanic
 
                 // notify the other robots of Greenfield
-                r.leaving();
+                r.leaving(r.getId());
 
                 // request the Administrator Server to leave Greenfield
                 try {
-                    r.removal();
+                    r.removal(r.getId());
                 } catch (RemovalFailureException e) {
                     errorln(e.toString());
                     System.exit(-1);

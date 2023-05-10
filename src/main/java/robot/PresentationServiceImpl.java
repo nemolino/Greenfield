@@ -5,6 +5,7 @@ import com.example.grpc.PresentationServiceGrpc.PresentationServiceImplBase;
 import com.example.grpc.PresentationServiceOuterClass.*;
 import io.grpc.stub.StreamObserver;
 
+import static utils.Printer.log;
 import static utils.Printer.logln;
 
 public class PresentationServiceImpl extends PresentationServiceImplBase {
@@ -18,14 +19,14 @@ public class PresentationServiceImpl extends PresentationServiceImplBase {
     @Override
     public void presentation(PresentationRequest request, StreamObserver<PresentationResponse> responseObserver){
 
-        logln("New registered robot R_" + request.getId() +
-                " , listening at " + request.getPort() +
-                " and placed in (" + request.getPosition().getX() + "," + request.getPosition().getY() + ")" );
+        log("New registered R_" + request.getId() +
+                " at port " + request.getPort() +
+                " placed in (" + request.getPosition().getX() + "," + request.getPosition().getY() + ")" );
 
         // update data structure
         synchronized (r.getOtherRobotsLock()) {
             r.getOtherRobots().add(new RobotRepresentation(request.getId(), "localhost", request.getPort()));
-            logln(r.getOtherRobots().toString());
+            logln("  | otherRobots: " + r.getOtherRobots());
         }
 
         PresentationResponse response = PresentationResponse.newBuilder().build();

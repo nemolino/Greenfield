@@ -3,6 +3,7 @@ package com.example.grpc;
 
 message LeavingRequest {
   string id = 1;
+  string sender = 2;  // optional
 }
 
 message LeavingResponse {}
