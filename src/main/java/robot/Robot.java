@@ -19,6 +19,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import robot.MQTT_pollution.PollutionSensorThread;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
@@ -37,6 +38,7 @@ public class Robot {
     private RobotPosition position;
     private List<RobotRepresentation> otherRobots;
     private final Object otherRobotsLock = new Object();
+    private PollutionSensorThread sensor;
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
@@ -206,5 +208,14 @@ public class Robot {
                 });
             }
         }
+    }
+
+    public void turnOnPollutionSensor(){
+        sensor = new PollutionSensorThread();
+        sensor.start();
+    }
+
+    public void turnOffPollutionSensor(){
+        sensor.stopMeGently();
     }
 }

@@ -34,7 +34,8 @@ public class RobotMainCLI {
         success("Registration of this robot to AdminServer succeded");
         logln(" --> Position: " + r.getPosition() + " , otherRobots: " + r.getOtherRobots());
 
-        // ... starts acquiring data from its pollution sensor
+        // starts acquiring data from its pollution sensor
+        r.turnOnPollutionSensor();
 
         // setting up gRPC server
         Server serverGRPC = ServerBuilder.forPort(r.getListeningPort())
@@ -62,6 +63,9 @@ public class RobotMainCLI {
 
                 // notify the other robots of Greenfield
                 r.leaving(r.getId());
+
+                // (my design choice)
+                r.turnOffPollutionSensor();
 
                 // request the Administrator Server to leave Greenfield
                 try {

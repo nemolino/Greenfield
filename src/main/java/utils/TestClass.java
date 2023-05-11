@@ -1,16 +1,11 @@
 package utils;
 
-import admin_server.RobotRepresentation;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-import static utils.Printer.*;
+import robot.MQTT_pollution.BufferImpl;
+import simulator.PM10Simulator;
 
 public class TestClass {
     public static void main(String[] args) {
-
+        /*
         // ID generation
         for (int i = 0; i < 30; i++)
             System.out.println(String.format("%05d", new Random().nextInt(100000)));
@@ -25,6 +20,17 @@ public class TestClass {
         List<String> s = null;
         List<String> s2 = new ArrayList<>(s);
         log(s.toString());
-        log(s2.toString());
+        log(s2.toString());*/
+
+        BufferImpl b = new BufferImpl();
+        PM10Simulator s = new PM10Simulator(b);
+        s.start();
+        int i = 0;
+        while (i < 4) {
+            System.out.println(b.readAllAndClean());
+            i++;
+        }
+
+        s.stopMeGently();
     }
 }
