@@ -35,7 +35,7 @@ public class RobotMainCLI {
         logln(" --> Position: " + r.getPosition() + " , otherRobots: " + r.getOtherRobots());
 
         // starts acquiring data from its pollution sensor
-        r.turnOnPollutionSensor();
+        r.turnOnPollutionProcessing();
 
         // setting up gRPC server
         Server serverGRPC = ServerBuilder.forPort(r.getListeningPort())
@@ -52,7 +52,8 @@ public class RobotMainCLI {
         // if there are other robots in Greenfield, presents itself to the other ones by sending them its position
         r.presentation();
 
-        // ... connects as a publisher to the MQTT topic of its district
+        // connects as a publisher to the MQTT topic of its district
+        r.turnOnPollutionPublishing();
 
         cliln("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){
@@ -64,8 +65,9 @@ public class RobotMainCLI {
                 // notify the other robots of Greenfield
                 r.leaving(r.getId());
 
-                // (my design choice)
-                r.turnOffPollutionSensor();
+                // (my choice)
+                r.turnOffPollutionPublishing();
+                r.turnOffPollutionProcessing();
 
                 // request the Administrator Server to leave Greenfield
                 try {

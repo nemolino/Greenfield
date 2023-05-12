@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+// probabilmente si può fare una sincronizzazione più fine
+
 public class BufferImpl implements simulator.Buffer {
 
     private final static int windowSize = 8;
@@ -33,8 +35,7 @@ public class BufferImpl implements simulator.Buffer {
             }
         }
         List<Measurement> window = new ArrayList<>(l.subList(0, windowSize));
-        for (int i = 0; i < windowOverlap; i++)
-            l.remove(0);
+        l.subList(0, windowOverlap).clear();
         return window;
     }
 }

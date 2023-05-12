@@ -43,6 +43,10 @@ public class RobotPosition {
         return new RobotPosition(x, y);
     }
 
+    public District getDistrict() {
+        return (x < 5) ? ((y < 5) ? District.D1 : District.D4) : ((y < 5) ? District.D2 : District.D3);
+    }
+
     @Override
     public String toString() {
         return "(" + this.x + "," + this.y + ")";
