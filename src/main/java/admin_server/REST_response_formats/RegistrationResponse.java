@@ -1,14 +1,9 @@
-package admin_server.services;
+package admin_server.REST_response_formats;
 
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
-import admin_server.SmartCity;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-
-import static utils.Printer.*;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

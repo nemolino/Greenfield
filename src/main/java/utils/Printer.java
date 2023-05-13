@@ -60,4 +60,6 @@ public final class Printer {
     public static void errorln() {
         System.out.println();
     }
+
+    public static void cli() { System.out.print(ANSI_PURPLE_BG + "" + ANSI_RESET); }
 }

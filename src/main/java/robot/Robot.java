@@ -3,7 +3,7 @@ package robot;
 import admin_server.District;
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
-import admin_server.services.RegistrationResponse;
+import admin_server.REST_response_formats.RegistrationResponse;
 
 import com.example.grpc.PresentationServiceGrpc;
 import com.example.grpc.PresentationServiceGrpc.PresentationServiceStub;

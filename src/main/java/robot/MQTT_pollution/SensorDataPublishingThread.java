@@ -43,7 +43,7 @@ public class SensorDataPublishingThread extends Thread {
                 List<Double> averages = buf.readAveragesAndClean();
                 long t = System.currentTimeMillis();
 
-                String payload = new Gson().toJson(new PollutionMessage(id, t, averages));
+                String payload = new Gson().toJson(new PollutionMessageWithID(id, t, averages));
 
                 MqttMessage message = new MqttMessage(payload.getBytes());
                 message.setQos(2);

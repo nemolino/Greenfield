@@ -1,6 +1,7 @@
-package admin_server.services;
+package admin_server.REST_services;
 
 import admin_server.District;
+import admin_server.REST_response_formats.RegistrationResponse;
 import admin_server.RobotPosition;
 import admin_server.RobotRepresentation;
 import admin_server.SmartCity;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Path("robots")
-public class RobotService {
+public class RobotServices {
 
     @Path("register")
     @POST

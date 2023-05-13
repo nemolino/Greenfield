@@ -5,11 +5,10 @@ import static utils.Printer.*;
 import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;
 import org.eclipse.paho.client.mqttv3.*;
-import robot.MQTT_pollution.PollutionMessage;
 import com.google.gson.Gson;
+import robot.MQTT_pollution.PollutionMessageWithID;
 
 import java.io.IOException;
-import java.sql.Timestamp;
 
 import static utils.Utils.ADMIN_SERVER_ADDRESS;
 import static utils.Utils.MQTT_BROKER_ADDRESS;
@@ -24,7 +23,8 @@ public class StartServer {
         warnln("Server running!");
         warnln("Server started on: " + ADMIN_SERVER_ADDRESS);
 
-        // new --
+        // MQTT subscription
+
         MqttClient client = null;
         String[] topics = new String[]{"greenfield/pollution/district1",
                                         "greenfield/pollution/district2",
@@ -36,29 +36,27 @@ public class StartServer {
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setCleanSession(true);
 
-            // Connect the client
             client.connect(connOpts);
             successln("AdminServer connected to MQTT Broker at " + MQTT_BROKER_ADDRESS);
 
-            // Callback
             client.setCallback(new MqttCallback() {
 
                 public void messageArrived(String topic, MqttMessage message) {
-                    //String msg = new String(message.getPayload());
-                    PollutionMessage msg = new Gson().fromJson(new String(message.getPayload()), PollutionMessage.class);
-                    System.out.println("PollutionMessage received on topic " + topic +
+
+                    PollutionMessageWithID msg = new Gson().fromJson(new String(message.getPayload()), PollutionMessageWithID.class);
+                    System.out.println("PollutionMessageWithID received on topic " + topic +
                             "\nrobotID: " + msg.getId() +
                             " , timestamp: " + msg.getTimestamp() +
                             " , averages list: " + msg.getAverages() + "\n");
+
+                    SmartCity.getInstance().addPollutionData(msg.getId(), new PollutionMessage(msg.getTimestamp(), msg.getAverages()));
                 }
 
                 public void connectionLost(Throwable cause) {
                     errorln("Connectionlost! cause:" + cause.getMessage());
                 }
 
-                public void deliveryComplete(IMqttDeliveryToken token) {
-                    // Not used here
-                }
+                public void deliveryComplete(IMqttDeliveryToken token) {}
 
             });
 
@@ -77,7 +75,7 @@ public class StartServer {
             me.printStackTrace();
         }
 
-        // new --
+        // ------------------
 
         warnln("Hit return to stop...");
         System.in.read();

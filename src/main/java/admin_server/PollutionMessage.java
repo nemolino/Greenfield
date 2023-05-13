@@ -1,22 +1,16 @@
-package robot.MQTT_pollution;
+package admin_server;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PollutionMessage {
 
-    private final String id;
     private final long timestamp;
     private final List<Double> averages;
 
-    public PollutionMessage(String id, long timestamp, List<Double> averages) {
-        this.id = id;
+    public PollutionMessage(long timestamp, List<Double> averages) {
         this.timestamp = timestamp;
         this.averages = averages;
-    }
-
-    public String getId() {
-        return id;
     }
 
     public long getTimestamp() {
@@ -25,5 +19,10 @@ public class PollutionMessage {
 
     public List<Double> getAverages() {
         return new ArrayList<>(averages);
+    }
+
+    @Override
+    public String toString() {
+        return "PollutionMessage : time " + timestamp + " , averages " + averages;
     }
 }
