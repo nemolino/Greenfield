@@ -38,7 +38,7 @@ public class AdminClientCLI {
             switch (input) {
                 case "a":
                     //logln("query1 execution ...");
-                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/list");
+                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/list_all_robots");
                     //logln("query1 response: " + clientResponse.toString());
                     if (clientResponse.getStatus() == 200) {
                         ListRobotsResponse response = clientResponse.getEntity(ListRobotsResponse.class);
@@ -65,20 +65,34 @@ public class AdminClientCLI {
                     //logln("query2 response: " + clientResponse.toString());
                     if (clientResponse.getStatus() == 200) {
                         String response = clientResponse.getEntity(String.class);
-                        logln("Average of the last " + n + " air pollution levels sent to the server by robot with ID " + id + " : " + response);
+                        logln("Response: " + response);
                     }
                     else
                         errorln("query2 FAILURE");
                     break;
 
                 case "c":
-                    logln("query3 execution ...");
+                    //logln("query3 execution ...");
+                    System.out.print("Insert t1: ");
+                    String t1 = String.valueOf(s.nextLong());
+                    System.out.print("Insert t2: ");
+                    String t2 = String.valueOf(s.nextLong());
+                    System.out.println();
+                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/avg_between_t1_and_t2/" + t1 + "/" + t2);
+                    logln("query3 response: " + clientResponse.toString());
+                    if (clientResponse.getStatus() == 200) {
+                        String response = clientResponse.getEntity(String.class);
+                        logln("Response: " + response);
+                    }
+                    else
+                        errorln("query3 FAILURE");
                     break;
 
                 case "q":
                     logln("GOODBYE AdminClient");
                     quit = true;
                     break;
+
                 default:
                     errorln("INVALID INPUT");
                     break;

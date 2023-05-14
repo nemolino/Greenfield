@@ -8,8 +8,8 @@ public class SmartCity {
 
     private static SmartCity instance;
 
-    private Map<District, List<RobotRepresentation>> registeredRobots;
-    private Map<String, List<PollutionMessage>> statsData;
+    private final Map<District, List<RobotRepresentation>> registeredRobots;
+    private final Map<String, List<PollutionMessage>> statsData;
 
     private SmartCity() {
         /* District.Di -> [ ... list of robots in District.Di... ] */
@@ -115,9 +115,8 @@ public class SmartCity {
         double result = 0;
         List<PollutionMessage> l = statsData.get(id);
 
-        if (l.size() == 0){
+        if (l.size() == 0)
             throw new RuntimeException("getAvgLastNOfId - robot " + id + " has not sent pollution levels yet");
-        }
 
         if (n > l.size() * 8){
             warnln("getAvgLastNOfId - last n = " + n + " is too big, we set n = " + l.size() * 8);
@@ -144,6 +143,36 @@ public class SmartCity {
             }
         }
         warn("\n");
+
+        return result / n;
+    }
+
+    public synchronized double getAvgInTimeRange(long t1, long t2) {
+
+        if (t2 < t1)
+            throw new RuntimeException("getAvgInTimeRange - t1 = " + t1 + " > t2 = " + t2);
+
+        double result = 0;
+        int n = 0;
+
+        warn("Summed values : ");
+        for (Map.Entry<String, List<PollutionMessage>> entry : statsData.entrySet()){
+            for (PollutionMessage m : entry.getValue()){
+                if (m.getTimestamp() < t1)
+                    continue;
+                if (m.getTimestamp() > t2)
+                    break;
+                for (double value : m.getAverages()){
+                    warn(value + " ");
+                    result += value;
+                    n++;
+                }
+            }
+        }
+        warn("\n");
+
+        if (n == 0)
+            throw new RuntimeException("getAvgInTimeRange - no pollution levels in range [t1 = " + t1 + ", t2 = " + t2 + "]");
 
         return result / n;
     }
