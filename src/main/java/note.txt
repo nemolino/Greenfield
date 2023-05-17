@@ -22,3 +22,4 @@ PM10Simulator           acts like a PRODUCER, puts Measurement(s) in BufferImpl
 SensorDataProcessing    acts like a CONSUMER, gets windows of 8 Measurement(s) from BufferImpl
 SensorDataProcessing    acts like a PRODUCER, puts avg of windows in BufferAverages
 SensorDataPublishing    acts like a CONSUMER, gets avg windows from BufferAverages and publish them via MQTT
+

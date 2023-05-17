@@ -1,5 +1,7 @@
 package admin_server;
 
+import admin_server.REST_response_formats.RobotRepresentation;
+
 import java.util.*;
 
 import static utils.Printer.*;
@@ -96,12 +98,13 @@ public class SmartCity {
         if (!statsData.containsKey(id))
             throw new RuntimeException("addPollutionData - robot " + id + " is not in the city");
         statsData.get(id).add(msg);
-
+        /*
         for (Map.Entry<String, List<PollutionMessage>> entry : statsData.entrySet()){
             logln(entry.getKey() + " --> ");
             for (PollutionMessage m : entry.getValue())
                 logln(m.toString());
         }
+        */
     }
 
     public synchronized double getAvgLastNOfId(int n, String id) {
@@ -149,6 +152,10 @@ public class SmartCity {
 
     public synchronized double getAvgInTimeRange(long t1, long t2) {
 
+        if (t1 < 0)
+            throw new RuntimeException("getAvgInTimeRange - t1 = " + t1 + " must be >= 0");
+        if (t2 < 0)
+            throw new RuntimeException("getAvgInTimeRange - t2 = " + t2 + " must be >= 0");
         if (t2 < t1)
             throw new RuntimeException("getAvgInTimeRange - t1 = " + t1 + " > t2 = " + t2);
 

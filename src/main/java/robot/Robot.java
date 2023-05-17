@@ -2,7 +2,7 @@ package robot;
 
 import admin_server.District;
 import admin_server.RobotPosition;
-import admin_server.RobotRepresentation;
+import admin_server.REST_response_formats.RobotRepresentation;
 import admin_server.REST_response_formats.RegistrationResponse;
 
 import com.example.grpc.PresentationServiceGrpc;
@@ -24,12 +24,14 @@ import org.eclipse.paho.client.mqttv3.*;
 import robot.MQTT_pollution.BufferAverages;
 import robot.MQTT_pollution.SensorDataProcessingThread;
 import robot.MQTT_pollution.SensorDataPublishingThread;
+import robot.maintenance.MaintenanceThread;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import static robot.RequestsHTTP.*;
 import static utils.Printer.*;
@@ -51,6 +53,13 @@ public class Robot {
     private SensorDataPublishingThread publishing;
     private MqttClient client;
     private String clientId;
+
+    // MAINTENANCE
+    private boolean needMaintenance = false;
+    private Long maintenanceRequestTimestamp = null;
+    private Set<RobotRepresentation> pendingMaintenanceRequests = null;
+    public final Object pendingMaintenanceRequestsLock = new Object();
+    public final Object maintenanceResponseLock = new Object();
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
@@ -89,6 +98,30 @@ public class Robot {
     }
 
     public List<RobotRepresentation> getOtherRobots() { return otherRobots; }
+
+    public boolean needMaintenance() {
+        return needMaintenance;
+    }
+
+    public void setNeedMaintenance(boolean needMaintenance) {
+        this.needMaintenance = needMaintenance;
+    }
+
+    public Long getMaintenanceRequestTimestamp() {
+        return maintenanceRequestTimestamp;
+    }
+
+    public void setMaintenanceRequestTimestamp(Long maintenanceRequestTimestamp) {
+        this.maintenanceRequestTimestamp = maintenanceRequestTimestamp;
+    }
+
+    public Set<RobotRepresentation> getPendingMaintenanceRequests() {
+        return pendingMaintenanceRequests;
+    }
+
+    public void setPendingMaintenanceRequests(Set<RobotRepresentation> pendingMaintenanceRequests) {
+        this.pendingMaintenanceRequests = pendingMaintenanceRequests;
+    }
 
     public void registration() throws RegistrationFailureException {
 
@@ -151,30 +184,8 @@ public class Robot {
                     }
 
                     public void onError(Throwable throwable) {
-
                         errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
-
-                        // removing x from otherRobots
-                        synchronized (otherRobotsLock) {
-                            for (RobotRepresentation y : otherRobots) {
-                                if (Objects.equals(y.getId(), x.getId())) {
-                                    otherRobots.remove(x);
-                                    break;
-                                }
-                            }
-                            errorln("otherRobots: " + otherRobots);
-                        }
-
-                        // removing x from AdminServer
-                        try {
-                            removal(x.getId());
-                            successln("Removing " + x + " also from AdminServer");
-                        } catch (RemovalFailureException e) {
-                            warnln("Someone already removed " + x + " from AdminServer");
-                        }
-
-                        // notifying remaining otherRobots that x left the city
-                        leaving(x.getId());
+                        removeDeadRobot(x);
                     }
 
                     public void onCompleted() {
@@ -207,36 +218,39 @@ public class Robot {
                     }
 
                     public void onError(Throwable throwable) {
-
                         errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
-
-                        // removing x from otherRobots
-                        synchronized (otherRobotsLock) {
-                            for (RobotRepresentation y : otherRobots) {
-                                if (Objects.equals(y.getId(), x.getId())) {
-                                    otherRobots.remove(x);
-                                    break;
-                                }
-                            }
-                            errorln("otherRobots: " + otherRobots);
-                        }
-
-                        // removing x from AdminServer
-                        try {
-                            removal(x.getId());
-                            errorln("Removing " + x + " also from AdminServer");
-                        } catch (RemovalFailureException e) {
-                            warnln("Someone already removed " + x + " from AdminServer");
-                        }
-
-                        // notifying remaining otherRobots that x left the city (recursive)
-                        leaving(x.getId());
+                        removeDeadRobot(x);
                     }
 
                     public void onCompleted() { channel.shutdownNow(); }
                 });
             }
         }
+    }
+
+    private void removeDeadRobot(RobotRepresentation x){
+
+        // removing x from otherRobots
+        synchronized (otherRobotsLock) {
+            for (RobotRepresentation y : otherRobots) {
+                if (Objects.equals(y.getId(), x.getId())) {
+                    otherRobots.remove(x);
+                    break;
+                }
+            }
+            errorln("otherRobots: " + otherRobots);
+        }
+
+        // removing x from AdminServer
+        try {
+            removal(x.getId());
+            errorln("Removing " + x + " also from AdminServer");
+        } catch (RemovalFailureException e) {
+            warnln("Someone already removed " + x + " from AdminServer");
+        }
+
+        // notifying remaining otherRobots that x left the city (recursive)
+        leaving(x.getId());
     }
 
     // POLLUTION
@@ -313,4 +327,12 @@ public class Robot {
             me.printStackTrace();
         }
     }
+
+    // MAINTENANCE
+
+    public void turnOnMaintenance(){
+        Thread maintenance = new MaintenanceThread(this);
+        maintenance.start();
+    }
+
 }

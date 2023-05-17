@@ -1,7 +1,7 @@
 package admin_server.REST_services;
 
 import admin_server.REST_response_formats.ListRobotsResponse;
-import admin_server.RobotRepresentation;
+import admin_server.REST_response_formats.RobotRepresentation;
 import admin_server.SmartCity;
 
 import javax.ws.rs.GET;
@@ -36,15 +36,15 @@ public class AdminClientServices {
 
         logln("Query2 : avg_last_n_of_id/{id = " + id + "}/{n = " + n + "})");
 
-        double result;
         try {
-            result = SmartCity.getInstance().getAvgLastNOfId(n, id);
+            double result = SmartCity.getInstance().getAvgLastNOfId(n, id);
+            successln("Query2 succeeded\n");
+            return Response.ok(String.valueOf(result)).build();
+
         } catch (Exception e) {
             warnln(e.getMessage());
             return Response.status(404).build();
         }
-        successln("Query2 succeeded\n");
-        return Response.ok(String.valueOf(result)).build();
     }
 
     @Path("avg_between_t1_and_t2/{t1}/{t2}")
@@ -54,14 +54,14 @@ public class AdminClientServices {
 
         logln("Query3 : avg_between_t1_and_t2/{t1 = " + t1 + "}/{t2 = " + t2 + "}");
 
-        double result;
         try {
-            result = SmartCity.getInstance().getAvgInTimeRange(t1, t2);
+            double result = SmartCity.getInstance().getAvgInTimeRange(t1, t2);
+            successln("Query3 succeeded\n");
+            return Response.ok(String.valueOf(result)).build();
+
         } catch (Exception e) {
             warnln(e.getMessage());
             return Response.status(404).build();
         }
-        successln("Query3 succeeded\n");
-        return Response.ok(String.valueOf(result)).build();
     }
 }

@@ -1,6 +1,6 @@
 package robot;
 
-import admin_server.RobotRepresentation;
+import admin_server.REST_response_formats.RobotRepresentation;
 import com.google.gson.Gson;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;

@@ -3,7 +3,7 @@ package admin_server.REST_services;
 import admin_server.District;
 import admin_server.REST_response_formats.RegistrationResponse;
 import admin_server.RobotPosition;
-import admin_server.RobotRepresentation;
+import admin_server.REST_response_formats.RobotRepresentation;
 import admin_server.SmartCity;
 
 import static admin_server.RobotPosition.generateRobotPosition;

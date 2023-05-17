@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-// probabilmente si può fare una sincronizzazione più fine
-
 public class BufferImpl implements simulator.Buffer {
 
     private final static int windowSize = 8;

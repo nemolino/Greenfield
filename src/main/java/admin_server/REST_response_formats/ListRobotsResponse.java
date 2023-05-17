@@ -1,7 +1,5 @@
 package admin_server.REST_response_formats;
 
-import admin_server.RobotRepresentation;
-
 import java.util.List;
 
 import javax.xml.bind.annotation.*;

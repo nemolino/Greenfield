@@ -1,0 +1,13 @@
+syntax = "proto3";
+package com.example.grpc;
+
+message MaintenanceRequest {
+  string id = 1;
+  string timestamp = 2;
+}
+
+message MaintenanceResponse {}
+
+service MaintenanceService {
+  rpc maintenance(MaintenanceRequest) returns (MaintenanceResponse);
+}

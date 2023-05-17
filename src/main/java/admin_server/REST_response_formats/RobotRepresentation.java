@@ -1,4 +1,4 @@
-package admin_server;
+package admin_server.REST_response_formats;
 
 import javax.xml.bind.annotation.XmlRootElement;
 

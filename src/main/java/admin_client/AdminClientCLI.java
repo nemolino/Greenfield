@@ -1,7 +1,7 @@
 package admin_client;
 
 import admin_server.REST_response_formats.ListRobotsResponse;
-import admin_server.RobotRepresentation;
+import admin_server.REST_response_formats.RobotRepresentation;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -36,8 +36,8 @@ public class AdminClientCLI {
             System.out.println();
 
             switch (input) {
+
                 case "a":
-                    //logln("query1 execution ...");
                     clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/list_all_robots");
                     //logln("query1 response: " + clientResponse.toString());
                     if (clientResponse.getStatus() == 200) {
@@ -55,7 +55,6 @@ public class AdminClientCLI {
                     break;
 
                 case "b":
-                    //logln("query2 execution ...");
                     System.out.print("Insert robot ID: ");
                     String id = s.next();
                     System.out.print("Insert n > 0: ");
@@ -72,14 +71,13 @@ public class AdminClientCLI {
                     break;
 
                 case "c":
-                    //logln("query3 execution ...");
                     System.out.print("Insert t1: ");
                     String t1 = String.valueOf(s.nextLong());
                     System.out.print("Insert t2: ");
                     String t2 = String.valueOf(s.nextLong());
                     System.out.println();
                     clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/avg_between_t1_and_t2/" + t1 + "/" + t2);
-                    logln("query3 response: " + clientResponse.toString());
+                    //logln("query3 response: " + clientResponse.toString());
                     if (clientResponse.getStatus() == 200) {
                         String response = clientResponse.getEntity(String.class);
                         logln("Response: " + response);

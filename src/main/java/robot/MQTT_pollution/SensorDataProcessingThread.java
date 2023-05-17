@@ -27,7 +27,7 @@ public class SensorDataProcessingThread extends Thread {
         while (!stopCondition) {
 
             List<Measurement> window = s.getBuffer().readAllAndClean();
-            warnln(window.toString());
+            //warnln(window.toString());
 
             double avg = 0;
             for (Measurement m : window)

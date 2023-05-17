@@ -1,6 +1,6 @@
 package robot.gRPC_services;
 
-import admin_server.RobotRepresentation;
+import admin_server.REST_response_formats.RobotRepresentation;
 import com.example.grpc.PresentationServiceGrpc.PresentationServiceImplBase;
 import com.example.grpc.PresentationServiceOuterClass.*;
 import io.grpc.stub.StreamObserver;

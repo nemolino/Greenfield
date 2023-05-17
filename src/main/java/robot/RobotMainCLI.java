@@ -2,8 +2,7 @@ package robot;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import robot.gRPC_services.LeavingServiceImpl;
-import robot.gRPC_services.PresentationServiceImpl;
+import robot.gRPC_services.*;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
@@ -41,6 +40,7 @@ public class RobotMainCLI {
         Server serverGRPC = ServerBuilder.forPort(r.getListeningPort())
                 .addService(new PresentationServiceImpl(r))
                 .addService(new LeavingServiceImpl(r))
+                .addService(new MaintenanceServiceImpl(r))
                 .build();
         try {
             serverGRPC.start();
@@ -54,6 +54,9 @@ public class RobotMainCLI {
 
         // connects as a publisher to the MQTT topic of its district
         r.turnOnPollutionPublishing();
+
+        // maintenance
+        r.turnOnMaintenance();
 
         cliln("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){
@@ -87,6 +90,8 @@ public class RobotMainCLI {
                 serverGRPC.shutdown();
                 break;
             }
+
+            // fix command
         }
     }
 }
