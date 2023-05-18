@@ -56,7 +56,7 @@ public class RobotMainCLI {
         r.turnOnPollutionPublishing();
 
         // maintenance
-        r.turnOnMaintenance();
+        //r.turnOnMaintenance();
 
         cliln("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){

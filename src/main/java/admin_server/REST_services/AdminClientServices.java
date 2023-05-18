@@ -50,7 +50,7 @@ public class AdminClientServices {
     @Path("avg_between_t1_and_t2/{t1}/{t2}")
     @GET
     @Produces(MediaType.TEXT_PLAIN)
-    public Response avgLastNOfId(@PathParam("t1") long t1, @PathParam("t2") long t2) {
+    public Response avgInTimeRange(@PathParam("t1") long t1, @PathParam("t2") long t2) {
 
         logln("Query3 : avg_between_t1_and_t2/{t1 = " + t1 + "}/{t2 = " + t2 + "}");
 

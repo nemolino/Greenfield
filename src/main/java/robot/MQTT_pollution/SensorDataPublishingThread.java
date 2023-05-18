@@ -6,6 +6,7 @@ import robot.Robot;
 
 import java.util.List;
 
+import static java.time.Instant.now;
 import static utils.Printer.errorln;
 import static utils.Printer.logln;
 
@@ -42,7 +43,7 @@ public class SensorDataPublishingThread extends Thread {
 
                 List<Double> averages = buf.readAveragesAndClean();
                 long t = System.currentTimeMillis();
-
+                //System.out.println(now().toString());
                 String payload = new Gson().toJson(new PollutionMessageWithID(id, t, averages));
 
                 MqttMessage message = new MqttMessage(payload.getBytes());

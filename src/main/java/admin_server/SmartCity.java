@@ -1,6 +1,7 @@
 package admin_server;
 
 import admin_server.REST_response_formats.RobotRepresentation;
+import com.google.common.collect.Lists;
 
 import java.util.*;
 
@@ -115,39 +116,43 @@ public class SmartCity {
         if (!statsData.containsKey(id))
             throw new RuntimeException("getAvgLastNOfId - robot " + id + " is not in the city");
 
-        double result = 0;
         List<PollutionMessage> l = statsData.get(id);
-
         if (l.size() == 0)
             throw new RuntimeException("getAvgLastNOfId - robot " + id + " has not sent pollution levels yet");
 
-        if (n > l.size() * 8){
-            warnln("getAvgLastNOfId - last n = " + n + " is too big, we set n = " + l.size() * 8);
-            n = l.size() * 8;
-        }
+        double result = 0;
+        int remainingToTake = n;
+        int taken = 0;
 
         warn("Summed values : ");
-        // summing over complete windows
-        int nOfWindowsToTakeCompletely = n / 8;
-        for (PollutionMessage x : l.subList(l.size() - nOfWindowsToTakeCompletely, l.size())){
-            for (double value : x.getAverages()){
-                warn(value + " ");
-                result += value;
+        for (PollutionMessage x : Lists.reverse(l)){
+            List<Double> averages = x.getAverages();
+            if (averages.size() <= remainingToTake){
+                for (double value : averages){
+                    warn(value + " ");
+                    result += value;
+                    taken++;
+                }
+                remainingToTake -= averages.size();
             }
-        }
-
-        // summing over the (optional) partial window
-        int nElementsToTakeFromThePartialWindow = n % 8;
-        if (nElementsToTakeFromThePartialWindow != 0){
-            List<Double> partialWindow = l.get(l.size() - nOfWindowsToTakeCompletely - 1).getAverages();
-            for (double value : partialWindow.subList(partialWindow.size() - nElementsToTakeFromThePartialWindow, partialWindow.size())) {
-                warn(value + " ");
-                result += value;
+            else{
+                for (double value : averages.subList(averages.size() - remainingToTake, averages.size())){
+                    warn(value + " ");
+                    result += value;
+                    taken++;
+                    remainingToTake--;
+                }
+                break;
             }
         }
         warn("\n");
 
-        return result / n;
+        if (remainingToTake > 0)
+            warnln("getAvgLastNOfId - last n = " + n + " is too big, we set take all the levels as having n = " + taken);
+        else if (remainingToTake != 0 || taken != n){
+            errorln("BAD ERROR IN CODE");
+        }
+        return result / taken;
     }
 
     public synchronized double getAvgInTimeRange(long t1, long t2) {

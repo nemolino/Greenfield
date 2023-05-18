@@ -23,3 +23,7 @@ SensorDataProcessing    acts like a CONSUMER, gets windows of 8 Measurement(s) f
 SensorDataProcessing    acts like a PRODUCER, puts avg of windows in BufferAverages
 SensorDataPublishing    acts like a CONSUMER, gets avg windows from BufferAverages and publish them via MQTT
 
+TODO
+correggi la query
+controlla sync su otherRobots
+maintenance
