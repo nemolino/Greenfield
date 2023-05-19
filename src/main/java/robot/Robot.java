@@ -21,6 +21,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import robot.MQTT_pollution.BufferAverages;
 import robot.MQTT_pollution.SensorDataProcessingThread;
 import robot.MQTT_pollution.SensorDataPublishingThread;
@@ -55,11 +56,7 @@ public class Robot {
     private String clientId;
 
     // MAINTENANCE
-    private boolean needMaintenance = false;
-    private Long maintenanceRequestTimestamp = null;
-    private Set<RobotRepresentation> pendingMaintenanceRequests = null;
-    public final Object pendingMaintenanceRequestsLock = new Object();
-    public final Object maintenanceResponseLock = new Object();
+    private MaintenanceThread maintenance;
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
@@ -98,30 +95,6 @@ public class Robot {
     }
 
     public List<RobotRepresentation> getOtherRobots() { return otherRobots; }
-
-    public boolean needMaintenance() {
-        return needMaintenance;
-    }
-
-    public void setNeedMaintenance(boolean needMaintenance) {
-        this.needMaintenance = needMaintenance;
-    }
-
-    public Long getMaintenanceRequestTimestamp() {
-        return maintenanceRequestTimestamp;
-    }
-
-    public void setMaintenanceRequestTimestamp(Long maintenanceRequestTimestamp) {
-        this.maintenanceRequestTimestamp = maintenanceRequestTimestamp;
-    }
-
-    public Set<RobotRepresentation> getPendingMaintenanceRequests() {
-        return pendingMaintenanceRequests;
-    }
-
-    public void setPendingMaintenanceRequests(Set<RobotRepresentation> pendingMaintenanceRequests) {
-        this.pendingMaintenanceRequests = pendingMaintenanceRequests;
-    }
 
     public void registration() throws RegistrationFailureException {
 
@@ -228,7 +201,7 @@ public class Robot {
         }
     }
 
-    private void removeDeadRobot(RobotRepresentation x){
+    public void removeDeadRobot(RobotRepresentation x){
 
         // removing x from otherRobots
         synchronized (otherRobotsLock) {
@@ -249,6 +222,9 @@ public class Robot {
             warnln("Someone already removed " + x + " from AdminServer");
         }
 
+        /* ***** update maintenance structure ***** */
+        maintenance.updatePendingMaintenanceRequests(x);
+
         // notifying remaining otherRobots that x left the city (recursive)
         leaving(x.getId());
     }
@@ -265,13 +241,14 @@ public class Robot {
 
         clientId = MqttClient.generateClientId();
         try {
-            client = new MqttClient(MQTT_BROKER_ADDRESS, clientId);
+            client = new MqttClient(MQTT_BROKER_ADDRESS, clientId, new MemoryPersistence());
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setCleanSession(true);
 
-            logln(clientId + " Connecting Broker " + MQTT_BROKER_ADDRESS);
+            //logln(clientId + " Connecting Broker " + MQTT_BROKER_ADDRESS);
             client.connect(connOpts);
-            logln(clientId + " Connected - Thread PID: " + Thread.currentThread().getId());
+            //logln(clientId + " Connected - Thread PID: " + Thread.currentThread().getId());
+            logln("... successfully connected to MQTT broker!");
 
             client.setCallback(new MqttCallback() {
                 public void messageArrived(String topic, MqttMessage message) {
@@ -286,9 +263,12 @@ public class Robot {
                     // Until the delivery is completed, messages with QoS 1 or 2 are retained from the client
                     // Delivery for a message is completed when all acknowledgments have been received
                     // When the callback returns from deliveryComplete to the main thread, the client removes the retained messages with QoS 1 or 2.
+                    /*
                     if (token.isComplete()) {
                        logln(clientId + " Message delivered - Thread PID: " + Thread.currentThread().getId());
                     }
+                    */
+
                 }
             });
 
@@ -331,8 +311,11 @@ public class Robot {
     // MAINTENANCE
 
     public void turnOnMaintenance(){
-        Thread maintenance = new MaintenanceThread(this);
+        maintenance = new MaintenanceThread(this);
         maintenance.start();
     }
 
+    public MaintenanceThread getMaintenance() {
+        return maintenance;
+    }
 }

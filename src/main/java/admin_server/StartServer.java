@@ -6,9 +6,12 @@ import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;
 import org.eclipse.paho.client.mqttv3.*;
 import com.google.gson.Gson;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import robot.MQTT_pollution.PollutionMessageWithID;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static utils.Utils.ADMIN_SERVER_ADDRESS;
 import static utils.Utils.MQTT_BROKER_ADDRESS;
@@ -16,6 +19,7 @@ import static utils.Utils.MQTT_BROKER_ADDRESS;
 public class StartServer {
 
     public static void main(String[] args) throws IOException {
+        Logger.getLogger("com.sun.jersey").setLevel(Level.SEVERE);
 
         HttpServer server = HttpServerFactory.create(ADMIN_SERVER_ADDRESS + "/");
         server.start();
@@ -32,7 +36,7 @@ public class StartServer {
                                         "greenfield/pollution/district4"};
 
         try {
-            client = new MqttClient(MQTT_BROKER_ADDRESS, MqttClient.generateClientId());
+            client = new MqttClient(MQTT_BROKER_ADDRESS, MqttClient.generateClientId(), new MemoryPersistence());
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setCleanSession(true);
 

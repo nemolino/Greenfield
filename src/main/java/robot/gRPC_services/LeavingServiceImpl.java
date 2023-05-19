@@ -39,6 +39,9 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
             logln(" | otherRobots: " + others);
         }
 
+        /* ***** update maintenance structure ***** */
+        r.getMaintenance().updatePendingMaintenanceRequestsById(request.getId());
+
         LeavingResponse response = LeavingResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();

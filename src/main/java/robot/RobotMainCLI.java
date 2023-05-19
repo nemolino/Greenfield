@@ -24,6 +24,7 @@ public class RobotMainCLI {
         cliln("robotID: " + id + " , port: " + listeningPort);
 
         Robot r = new Robot(id, listeningPort, ADMIN_SERVER_ADDRESS);
+
         try {
             r.registration();
         } catch (RegistrationFailureException e) {
@@ -56,19 +57,26 @@ public class RobotMainCLI {
         r.turnOnPollutionPublishing();
 
         // maintenance
-        //r.turnOnMaintenance();
+        r.turnOnMaintenance();
 
         cliln("Insert:\t\t\"quit\" to remove the robot from the smart city");
         while (true){
             String input = s.next();
             if (input.equals("quit")){
 
-                // TODO ... complete any operation at the mechanic
+                // complete any operation at the mechanic
+                r.getMaintenance().stopMeGently();
+                try {
+                    r.getMaintenance().join();
+                    warnln("ora ho finito dal meccanico");
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
 
                 // notify the other robots of Greenfield
                 r.leaving(r.getId());
 
-                // (my choice)
                 r.turnOffPollutionPublishing();
                 r.turnOffPollutionProcessing();
 

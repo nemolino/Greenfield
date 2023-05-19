@@ -48,7 +48,7 @@ public class SensorDataPublishingThread extends Thread {
 
                 MqttMessage message = new MqttMessage(payload.getBytes());
                 message.setQos(2);
-                logln(clientId + " Publishing message: " + payload);
+                //logln(clientId + " Publishing message: " + payload);
                 try {
                     client.publish(topic, message);
                 } catch (MqttException me) {
@@ -60,7 +60,7 @@ public class SensorDataPublishingThread extends Thread {
                     errorln("excep " + me);
                     me.printStackTrace();
                 }
-                logln(clientId + " Message published - Thread PID: " + Thread.currentThread().getId());
+                //logln(clientId + " Message published - Thread PID: " + Thread.currentThread().getId());
             }
         }
     }

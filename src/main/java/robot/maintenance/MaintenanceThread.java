@@ -14,11 +14,21 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import static java.time.Instant.now;
 import static utils.Printer.*;
 
 public class MaintenanceThread extends Thread {
 
     protected volatile boolean stopCondition = false;
+
+    public static Long maintenanceRequestTimestamp = null;
+
+    private static Set<RobotRepresentation> pendingMaintenanceRequests = null;
+
+    private static final Object pendingMaintenanceRequestsLock = new Object();
+
+    public static final Object maintenanceResponseLock = new Object();
+    public static final Object lock = new Object();
 
     private final Robot r;
 
@@ -34,8 +44,8 @@ public class MaintenanceThread extends Thread {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            if (Math.random() < 0.1){
-                System.out.println("I need maintenance!");
+            if (Math.random() < 0.3){
+                System.out.println(now() + " - I need maintenance!");
                 accessMaintenance();
             }
         }
@@ -47,13 +57,15 @@ public class MaintenanceThread extends Thread {
 
     public void accessMaintenance() {
 
-        r.setNeedMaintenance(true);
-        r.setMaintenanceRequestTimestamp(System.currentTimeMillis());
-
         synchronized (r.getOtherRobotsLock()) {
 
-            r.setPendingMaintenanceRequests(new HashSet<>(r.getOtherRobots()));
-            System.out.println("pending: " + r.getPendingMaintenanceRequests());
+            synchronized (lock){
+                maintenanceRequestTimestamp = System.currentTimeMillis();
+            }
+
+            pendingMaintenanceRequests = new HashSet<>(r.getOtherRobots());
+
+            System.out.println(now() + " - pending: " + pendingMaintenanceRequests);
 
             for (RobotRepresentation x : r.getOtherRobots()) {
 
@@ -63,49 +75,18 @@ public class MaintenanceThread extends Thread {
                 MaintenanceServiceGrpc.MaintenanceServiceStub stub = MaintenanceServiceGrpc.newStub(channel);
                 MaintenanceRequest request = MaintenanceRequest.newBuilder()
                         .setId(r.getId())
-                        .setTimestamp(r.getMaintenanceRequestTimestamp().toString())
+                        .setTimestamp(maintenanceRequestTimestamp.toString())
                         .build();
 
                 stub.maintenance(request, new StreamObserver<MaintenanceResponse>() {
 
                     public void onNext(MaintenanceResponse response) {
-                        if (r.getPendingMaintenanceRequests().contains(x)){
-                            r.getPendingMaintenanceRequests().remove(x);
-                            System.out.println("pending - { " + x + " }: " + r.getPendingMaintenanceRequests());
-                            synchronized (r.pendingMaintenanceRequestsLock) {
-                                r.pendingMaintenanceRequestsLock.notify();
-                            }
-                        }
-                        else{
-                            errorln("aiuto, dovrebbe contenerlo");
-                        }
+                        updatePendingMaintenanceRequests(x);
                     }
 
                     public void onError(Throwable throwable) {
-                        /*
                         errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
-
-                        // removing x from otherRobots
-                        synchronized (r.getOtherRobotsLock()) {
-                            for (RobotRepresentation y : r.getOtherRobots()) {
-                                if (Objects.equals(y.getId(), x.getId())) {
-                                    r.getOtherRobots().remove(x);
-                                    break;
-                                }
-                            }
-                            errorln("otherRobots: " + r.getOtherRobots());
-                        }
-
-                        // removing x from AdminServer
-                        try {
-                            r.removal(x.getId());
-                            successln("Removing " + x + " also from AdminServer");
-                        } catch (RemovalFailureException e) {
-                            warnln("Someone already removed " + x + " from AdminServer");
-                        }
-
-                        // notifying remaining otherRobots that x left the city
-                        r.leaving(x.getId());*/
+                        r.removeDeadRobot(x);
                     }
 
                     public void onCompleted() {
@@ -115,31 +96,62 @@ public class MaintenanceThread extends Thread {
             }
         }
 
-
         // waiting for all the responses
-        synchronized (r.pendingMaintenanceRequestsLock){
-            while (r.getPendingMaintenanceRequests().size() > 0){
+        synchronized (pendingMaintenanceRequestsLock){
+            while (pendingMaintenanceRequests.size() > 0){
                 try {
-                    r.pendingMaintenanceRequestsLock.wait();
+                    pendingMaintenanceRequestsLock.wait();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
         }
 
-        System.out.println("... entering mechanic");
+        successln(now() + " ... entering mechanic");
         try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("... exiting mechanic");
+        successln(now() + " ... exiting mechanic");
 
-        r.setNeedMaintenance(false);
-        r.setMaintenanceRequestTimestamp(null);
-        r.setPendingMaintenanceRequests(null);
-        synchronized (r.maintenanceResponseLock) {
-            r.maintenanceResponseLock.notify();
+        synchronized (lock) {
+            maintenanceRequestTimestamp = null;
         }
+        pendingMaintenanceRequests = null;
+        synchronized (maintenanceResponseLock) {
+            maintenanceResponseLock.notifyAll();
+        }
+    }
+
+    synchronized public void updatePendingMaintenanceRequests(RobotRepresentation x){
+        if (pendingMaintenanceRequests != null){
+            if (pendingMaintenanceRequests.contains(x)){
+                pendingMaintenanceRequests.remove(x);
+                System.out.println(now() + " - pending - { " + x + " }: " + pendingMaintenanceRequests);
+                synchronized (pendingMaintenanceRequestsLock) {
+                    pendingMaintenanceRequestsLock.notify();
+                }
+            }
+            else errorln("WARN - robot not in pendingMaintenanceRequests");
+        }
+        else errorln("WARN - null pendingMaintenanceRequests");
+    }
+
+    synchronized public void updatePendingMaintenanceRequestsById(String id){
+        if (pendingMaintenanceRequests != null){
+            for (RobotRepresentation x : pendingMaintenanceRequests) {
+                if (x.getId() == id) {
+                    pendingMaintenanceRequests.remove(x);
+                    System.out.println(now() + " - pending - { " + x + " }: " + pendingMaintenanceRequests);
+                    synchronized (pendingMaintenanceRequestsLock) {
+                        pendingMaintenanceRequestsLock.notify();
+                    }
+                    return;
+                }
+            }
+            errorln("WARN - robot not in pendingMaintenanceRequests");
+        }
+        else errorln("WARN - null pendingMaintenanceRequests");
     }
 }
