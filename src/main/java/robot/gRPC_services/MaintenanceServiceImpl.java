@@ -19,7 +19,7 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
     @Override
     public void maintenance(MaintenanceRequest request, StreamObserver<MaintenanceResponse> responseObserver) {
 
-        logln("Maintenance notification from R_" + request.getId() + " with timestamp " + request.getTimestamp());
+        logln("Maintenance access request from R_" + request.getId() + " with timestamp " + request.getTimestamp());
 
         while (cannotAnswer(request.getTimestamp())){
             System.out.println("... block response to " + request.getId());

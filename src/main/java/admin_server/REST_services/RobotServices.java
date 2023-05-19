@@ -44,7 +44,7 @@ public class RobotServices {
             }
         }
 
-        successln("Registration succeded\n");
+        successln("Registration succeeded\n");
         return Response.ok(new RegistrationResponse(position, otherRobots)).build();
     }
 
@@ -62,7 +62,7 @@ public class RobotServices {
             return Response.status(404).build();
         }
 
-        successln("Removal succeded\n");
+        successln("Removal succeeded\n");
         return Response.ok().build();
     }
 }

@@ -7,7 +7,7 @@ import com.sun.net.httpserver.HttpServer;
 import org.eclipse.paho.client.mqttv3.*;
 import com.google.gson.Gson;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import robot.MQTT_pollution.PollutionMessageWithID;
+import robot.pollution.PollutionMessageWithID;
 
 import java.io.IOException;
 import java.util.logging.Level;

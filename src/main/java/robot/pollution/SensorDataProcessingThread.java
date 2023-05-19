@@ -1,4 +1,4 @@
-package robot.MQTT_pollution;
+package robot.pollution;
 
 import simulator.Measurement;
 import simulator.PM10Simulator;

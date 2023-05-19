@@ -7,8 +7,6 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 
-import static utils.Printer.errorln;
-
 public class RequestsHTTP {
 
     public static ClientResponse postRegistrationRequest(Client client, String url, RobotRepresentation req) {
@@ -17,7 +15,7 @@ public class RequestsHTTP {
         try {
             return webResource.type("application/json").post(ClientResponse.class, input);
         } catch (ClientHandlerException e) {
-            errorln("Server non disponibile");
+            //errorln("Server non disponibile");
             return null;
         }
     }
@@ -28,7 +26,7 @@ public class RequestsHTTP {
         try {
             return webResource.type("application/json").delete(ClientResponse.class, input);
         } catch (ClientHandlerException e) {
-            errorln("Server non disponibile");
+            //errorln("Server non disponibile");
             return null;
         }
     }

@@ -19,44 +19,36 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
-import org.eclipse.paho.client.mqttv3.*;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import robot.MQTT_pollution.BufferAverages;
-import robot.MQTT_pollution.SensorDataProcessingThread;
-import robot.MQTT_pollution.SensorDataPublishingThread;
+import robot.pollution.PollutionMonitoring;
+import robot.gRPC_services.LeavingServiceImpl;
+import robot.gRPC_services.MaintenanceServiceImpl;
+import robot.gRPC_services.PresentationServiceImpl;
 import robot.maintenance.MaintenanceThread;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static robot.RequestsHTTP.*;
 import static utils.Printer.*;
-import static utils.Utils.MQTT_BROKER_ADDRESS;
 
 public class Robot {
 
     private final String id;
     private final int listeningPort;
     private final String adminServerAddress;
+
     private RobotPosition position;
     private District district;
     private List<RobotRepresentation> otherRobots;
     private final Object otherRobotsLock = new Object();
 
-    // POLLUTION
-    private BufferAverages b;
-    private SensorDataProcessingThread processing;
-    private SensorDataPublishingThread publishing;
-    private MqttClient client;
-    private String clientId;
-
-    // MAINTENANCE
-    private MaintenanceThread maintenance;
+    private Server serverGRPC;
+    private PollutionMonitoring p;
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
@@ -64,144 +56,268 @@ public class Robot {
         this.adminServerAddress = adminServerAddress;
     }
 
-    public BufferAverages getBufferAverages() {
-        return b;
+    public void robotMain() {
+
+        /* -------------------------------------------------- registration of this robot to Administration Server --- */
+        try {
+            registration();
+        } catch (RegistrationFailureException e) {
+            errorln(e.toString());
+            return;
+        } catch (Exception e) {
+            e.printStackTrace();
+            errorln("BAD ERROR in registration to AdminServer");
+            errorln(e.toString());
+            return;
+        }
+        successln("... registration to AdminServer succeeded " +
+                "--> Position: " + position + " , otherRobots: " + otherRobots);
+
+        /* --- (thread start) ------------------------------------ starting to get data from air pollution sensor --- */
+        p = new PollutionMonitoring(this);
+        p.turnOnPollutionProcessing();
+
+        /* ------------------------------------------------------------------------------- setting up gRPC server --- */
+        try {
+            startServerGRPC();
+        } catch (Exception e) {
+            errorln(e.toString());
+            return;
+        }
+        logln("... gRPC server on");
+
+        /* ----------------------------------------------- presentation to the other robots already in Greenfield --- */
+        presentation();
+
+        /* --- (thread start) ----------- starting to publish pollution levels into the MQTT topic of my district --- */
+        p.turnOnPollutionPublishing();
+
+        /* --- (thread start) ---------- starting to organize with the other robots the access to the maintenance --- */
+        turnOnMaintenance();
+
+        /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
+        cli();
     }
 
-    public MqttClient getMqttClient() {
-        return client;
+    private void cli() {
+        Scanner s = new Scanner(System.in);
+        String menu = "Insert:\t\t\"quit\" to remove this robot from the smart city\n" +
+                "\t\t\t \"fix\" to request the maintenance for this robot";
+        cliln(menu);
+        while (true) {
+            String input = s.next();
+
+            if (input.equals("quit")) {
+
+                /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
+                turnOffMaintenance();
+
+                /* --------------------------------------- notifying the other robots that I'm leaving Greenfield --- */
+                leaving(id);
+
+                /* --- (thread stop) ---------------------------- finishing to get data from air pollution sensor --- */
+                p.turnOffPollutionPublishing();
+
+                /* --- (thread stop) -------------------------------------- finishing pollution levels publishing --- */
+                p.turnOffPollutionProcessing();
+
+                /* --------------------------------------------- removal of this robot from Administration Server --- */
+                try {
+                    removal(id);
+                } catch (RemovalFailureException e) {
+                    errorln(e.toString());
+                    return;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    errorln("BAD ERROR in removal from AdminServer");
+                    errorln(e.toString());
+                    return;
+                }
+                successln("... removal of this robot from AdminServer succeeded");
+
+                /* -------------------------------------------------------------------- shutting down gRPC server --- */
+                try {
+                    shutdownServerGRPC();
+                } catch (Exception e) {
+                    errorln(e.toString());
+                    return;
+                }
+                logln("... gRPC server off");
+                break;
+            } else if (input.equals("fix")) {
+                logln("... fix ...");
+            } else
+                errorln("INVALID INPUT");
+        }
     }
 
-    public String getMqttClientId() {
-        return clientId;
+    // ------------------------------------------------------------------------------------- useful Getters & Setters ---
+
+    public String getId() {
+        return id;
+    }
+
+    public Object getOtherRobotsLock() {
+        return otherRobotsLock;
+    }
+
+    public List<RobotRepresentation> getOtherRobots() {
+        return otherRobots;
     }
 
     public District getDistrict() {
         return district;
     }
 
-    public String getId() { return id; }
+    // --------------------------------------------------------------------------------------- gRPC Server utilities ---
 
-    public Object getOtherRobotsLock() {
-        return otherRobotsLock;
+    private void startServerGRPC() {
+        try {
+            serverGRPC = ServerBuilder.forPort(listeningPort)
+                    .addService(new PresentationServiceImpl(this))
+                    .addService(new LeavingServiceImpl(this))
+                    .addService(new MaintenanceServiceImpl(this))
+                    .build();
+            serverGRPC.start();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to start gRPC server properly");
+        }
     }
 
-    public RobotPosition getPosition() {
-        return position;
+    // ?? calls propagation ??
+    private void shutdownServerGRPC() {
+        try {
+            // waiting 5 seconds for all the calls to be propagated
+            serverGRPC.awaitTermination(5, TimeUnit.SECONDS);
+            serverGRPC.shutdown();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to shutdown gRPC server properly");
+        }
     }
 
-    public int getListeningPort() {
-        return listeningPort;
-    }
+    // ------------------------------------------------------------------- Administration Server REST services calls ---
 
-    public List<RobotRepresentation> getOtherRobots() { return otherRobots; }
-
-    public void registration() throws RegistrationFailureException {
+    // registration of this robot to Administration Server
+    private void registration() throws RegistrationFailureException {
 
         Client client = Client.create();
-        ClientResponse clientResponse;
-
-        clientResponse = postRegistrationRequest(client, adminServerAddress + "/robots/register",
+        ClientResponse response = postRegistrationRequest(client, adminServerAddress + "/robots/register",
                 new RobotRepresentation(id, "localhost", listeningPort));
+
+        if (response == null)
+            throw new RegistrationFailureException("Server is unavailable");
 
         //logln("Registration response: " + clientResponse.toString());
 
-        if (clientResponse.getStatus() == 200) {
+        if (response.getStatus() == 200) {
 
-            RegistrationResponse r = clientResponse.getEntity(RegistrationResponse.class);
-            this.position = r.getPosition();
-            this.district = this.position.getDistrict();
-            this.otherRobots = r.getOtherRobots();
-            if (this.otherRobots == null)
-                this.otherRobots = new ArrayList<>();
-        } else {
+            RegistrationResponse r = response.getEntity(RegistrationResponse.class);
+            position = r.getPosition();
+            district = position.getDistrict();
+            otherRobots = r.getOtherRobots();
+            if (otherRobots == null)
+                otherRobots = new ArrayList<>();
+        } else
             throw new RegistrationFailureException("Registration failure");
-        }
     }
 
-    public void removal(String leavingRobotId) throws RemovalFailureException {
+    // removal of a robot by its id from Administration Server
+    private void removal(String id) throws RemovalFailureException {
 
         Client client = Client.create();
-        ClientResponse clientResponse;
+        ClientResponse response = deleteRemovalRequest(client, adminServerAddress + "/robots/remove", id);
 
-        clientResponse = deleteRemovalRequest(client, adminServerAddress + "/robots/remove", leavingRobotId);
+        if (response == null)
+            throw new RemovalFailureException("Server is unavailable");
 
         //logln("Removal response: " + clientResponse.toString());
 
-        if (clientResponse.getStatus() != 200)
+        if (response.getStatus() != 200)
             throw new RemovalFailureException("Removal failure");
     }
 
-    public void presentation() {
+    // ?? sincronizzazione è ok ??
+    private void presentation() {
 
-        synchronized (this.otherRobotsLock) {
-            for (RobotRepresentation x : this.otherRobots) {
+        List<RobotRepresentation> otherRobotsCopy;
+        synchronized (otherRobotsLock) {
+            otherRobotsCopy = new ArrayList<>(otherRobots);
+        }
 
-                final ManagedChannel channel = ManagedChannelBuilder
-                        .forTarget("localhost:" + x.getPort()).usePlaintext().build();
+        for (RobotRepresentation x : otherRobotsCopy) {
 
-                PresentationServiceStub stub = PresentationServiceGrpc.newStub(channel);
-                PresentationRequest request = PresentationRequest.newBuilder()
-                        .setId(this.id)
-                        .setPort(this.listeningPort)
-                        .setPosition(PresentationRequest.Position.newBuilder()
-                                .setX(this.position.getX())
-                                .setY(this.position.getY())
-                                .build())
-                        .build();
+            final ManagedChannel channel = ManagedChannelBuilder
+                    .forTarget("localhost:" + x.getPort()).usePlaintext().build();
 
-                stub.presentation(request, new StreamObserver<PresentationResponse>() {
+            PresentationServiceStub stub = PresentationServiceGrpc.newStub(channel);
+            PresentationRequest request = PresentationRequest.newBuilder()
+                    .setId(id)
+                    .setPort(listeningPort)
+                    .setPosition(PresentationRequest.Position.newBuilder()
+                            .setX(position.getX())
+                            .setY(position.getY())
+                            .build())
+                    .build();
 
-                    public void onNext(PresentationResponse response) {
-                        successln("Presentation to " + x + " succeded");
-                    }
+            stub.presentation(request, new StreamObserver<PresentationResponse>() {
 
-                    public void onError(Throwable throwable) {
-                        errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
-                        removeDeadRobot(x);
-                    }
+                public void onNext(PresentationResponse response) {
+                    successln("Presentation to " + x + " succeded");
+                }
 
-                    public void onCompleted() {
-                        channel.shutdownNow();
-                    }
-                });
-            }
+                public void onError(Throwable throwable) {
+                    errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
+                    removeDeadRobot(x);
+                }
+
+                public void onCompleted() {
+                    channel.shutdownNow();
+                }
+            });
         }
     }
 
-    public void leaving(String leavingRobotId) {
+    // ?? sincronizzazione è ok ??
+    private void leaving(String leavingRobotId) {
 
-        synchronized (this.otherRobotsLock) {
-            for (RobotRepresentation x : this.otherRobots) {
-
-                final ManagedChannel channel = ManagedChannelBuilder
-                        .forTarget("localhost:" + x.getPort()).usePlaintext().build();
-
-                LeavingServiceStub stub = LeavingServiceGrpc.newStub(channel);
-                LeavingRequest request;
-                if (Objects.equals(leavingRobotId, this.id))
-                    request = LeavingRequest.newBuilder().setId(leavingRobotId).build();
-                else
-                    request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(this.id).build();
-
-                stub.leaving(request, new StreamObserver<LeavingResponse>() {
-
-                    public void onNext(LeavingResponse response) {
-                        successln("I successfully notified " + x + " that " + leavingRobotId + " is leaving");
-                    }
-
-                    public void onError(Throwable throwable) {
-                        errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
-                        removeDeadRobot(x);
-                    }
-
-                    public void onCompleted() { channel.shutdownNow(); }
-                });
-            }
+        List<RobotRepresentation> otherRobotsCopy;
+        synchronized (otherRobotsLock) {
+            otherRobotsCopy = new ArrayList<>(otherRobots);
         }
+
+        for (RobotRepresentation x : otherRobotsCopy) {
+
+            final ManagedChannel channel = ManagedChannelBuilder
+                    .forTarget("localhost:" + x.getPort()).usePlaintext().build();
+
+            LeavingServiceStub stub = LeavingServiceGrpc.newStub(channel);
+            LeavingRequest request;
+            if (Objects.equals(leavingRobotId, id))
+                request = LeavingRequest.newBuilder().setId(leavingRobotId).build();
+            else
+                request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(this.id).build();
+
+            stub.leaving(request, new StreamObserver<LeavingResponse>() {
+
+                public void onNext(LeavingResponse response) {
+                    successln("I successfully notified " + x + " that " + leavingRobotId + " is leaving");
+                }
+
+                public void onError(Throwable throwable) {
+                    errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
+                    removeDeadRobot(x);
+                }
+
+                public void onCompleted() {
+                    channel.shutdownNow();
+                }
+            });
+        }
+
     }
 
-    public void removeDeadRobot(RobotRepresentation x){
+    // ?? sincronizzazione è ok ??
+    public void removeDeadRobot(RobotRepresentation x) {
 
         // removing x from otherRobots
         synchronized (otherRobotsLock) {
@@ -229,92 +345,26 @@ public class Robot {
         leaving(x.getId());
     }
 
-    // POLLUTION
+    // ---------------------------------------------------------------------- Maintenance (da spostare e riguardare) ---
 
-    public void turnOnPollutionProcessing(){
-        this.b = new BufferAverages();
-        processing = new SensorDataProcessingThread(this.b);
-        processing.start();
-    }
+    private MaintenanceThread maintenance;
 
-    public void turnOnPollutionPublishing(){
-
-        clientId = MqttClient.generateClientId();
-        try {
-            client = new MqttClient(MQTT_BROKER_ADDRESS, clientId, new MemoryPersistence());
-            MqttConnectOptions connOpts = new MqttConnectOptions();
-            connOpts.setCleanSession(true);
-
-            //logln(clientId + " Connecting Broker " + MQTT_BROKER_ADDRESS);
-            client.connect(connOpts);
-            //logln(clientId + " Connected - Thread PID: " + Thread.currentThread().getId());
-            logln("... successfully connected to MQTT broker!");
-
-            client.setCallback(new MqttCallback() {
-                public void messageArrived(String topic, MqttMessage message) {
-                    // Not used Here
-                }
-
-                public void connectionLost(Throwable cause) {
-                    errorln(clientId + " Connectionlost! cause:" + cause.getMessage());
-                }
-
-                public void deliveryComplete(IMqttDeliveryToken token) {
-                    // Until the delivery is completed, messages with QoS 1 or 2 are retained from the client
-                    // Delivery for a message is completed when all acknowledgments have been received
-                    // When the callback returns from deliveryComplete to the main thread, the client removes the retained messages with QoS 1 or 2.
-                    /*
-                    if (token.isComplete()) {
-                       logln(clientId + " Message delivered - Thread PID: " + Thread.currentThread().getId());
-                    }
-                    */
-
-                }
-            });
-
-        } catch (MqttException me ) {
-            errorln("ERROR IN MQTT CONNECTION");
-            errorln("reason " + me.getReasonCode());
-            errorln("msg " + me.getMessage());
-            errorln("loc " + me.getLocalizedMessage());
-            errorln("cause " + me.getCause());
-            errorln("excep " + me);
-            me.printStackTrace();
-        }
-
-        publishing = new SensorDataPublishingThread(this);
-        publishing.start();
-    }
-
-    public void turnOffPollutionProcessing(){
-        processing.stopMeGently();
-    }
-
-    public void turnOffPollutionPublishing(){
-
-        publishing.stopMeGently();
-        try{
-            if (client.isConnected())
-                client.disconnect();
-            logln("Publisher " + clientId + " disconnected - Thread PID: " + Thread.currentThread().getId());
-        } catch (MqttException me) {
-            errorln("ERROR IN MQTT DISCONNECTION");
-            errorln("reason " + me.getReasonCode());
-            errorln("msg " + me.getMessage());
-            errorln("loc " + me.getLocalizedMessage());
-            errorln("cause " + me.getCause());
-            errorln("excep " + me);
-            me.printStackTrace();
-        }
-    }
-
-    // MAINTENANCE
-
-    public void turnOnMaintenance(){
+    private void turnOnMaintenance() {
         maintenance = new MaintenanceThread(this);
         maintenance.start();
     }
 
+    private void turnOffMaintenance() {
+        maintenance.stopMeGently();
+        try {
+            maintenance.join();
+            warnln("... maintenance operations are finished");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /* getters | setters */
     public MaintenanceThread getMaintenance() {
         return maintenance;
     }

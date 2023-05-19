@@ -10,11 +10,11 @@ import io.grpc.stub.StreamObserver;
 import robot.Robot;
 import utils.exceptions.RemovalFailureException;
 
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import static java.time.Instant.now;
 import static utils.Printer.*;
 
 public class MaintenanceThread extends Thread {
@@ -45,7 +45,7 @@ public class MaintenanceThread extends Thread {
                 throw new RuntimeException(e);
             }
             if (Math.random() < 0.3){
-                System.out.println(now() + " - I need maintenance!");
+                System.out.println(LocalTime.now() + " - I need maintenance!");
                 accessMaintenance();
             }
         }
@@ -65,7 +65,7 @@ public class MaintenanceThread extends Thread {
 
             pendingMaintenanceRequests = new HashSet<>(r.getOtherRobots());
 
-            System.out.println(now() + " - pending: " + pendingMaintenanceRequests);
+            System.out.println(LocalTime.now() + " - pending: " + pendingMaintenanceRequests);
 
             for (RobotRepresentation x : r.getOtherRobots()) {
 
@@ -107,13 +107,13 @@ public class MaintenanceThread extends Thread {
             }
         }
 
-        successln(now() + " ... entering mechanic");
+        successln(LocalTime.now() + " ... ENTER maintenance");
         try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        successln(now() + " ... exiting mechanic");
+        successln(LocalTime.now() + " ...  EXIT maintenance");
 
         synchronized (lock) {
             maintenanceRequestTimestamp = null;
@@ -128,7 +128,7 @@ public class MaintenanceThread extends Thread {
         if (pendingMaintenanceRequests != null){
             if (pendingMaintenanceRequests.contains(x)){
                 pendingMaintenanceRequests.remove(x);
-                System.out.println(now() + " - pending - { " + x + " }: " + pendingMaintenanceRequests);
+                System.out.println(LocalTime.now() + " - pending - { " + x + " }: " + pendingMaintenanceRequests);
                 synchronized (pendingMaintenanceRequestsLock) {
                     pendingMaintenanceRequestsLock.notify();
                 }
@@ -143,7 +143,7 @@ public class MaintenanceThread extends Thread {
             for (RobotRepresentation x : pendingMaintenanceRequests) {
                 if (x.getId() == id) {
                     pendingMaintenanceRequests.remove(x);
-                    System.out.println(now() + " - pending - { " + x + " }: " + pendingMaintenanceRequests);
+                    System.out.println(LocalTime.now() + " - pending - { " + x + " }: " + pendingMaintenanceRequests);
                     synchronized (pendingMaintenanceRequestsLock) {
                         pendingMaintenanceRequestsLock.notify();
                     }

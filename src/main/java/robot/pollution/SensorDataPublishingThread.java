@@ -1,8 +1,7 @@
-package robot.MQTT_pollution;
+package robot.pollution;
 
 import org.eclipse.paho.client.mqttv3.*;
 import com.google.gson.Gson;
-import robot.Robot;
 
 import java.util.List;
 
@@ -14,24 +13,23 @@ public class SensorDataPublishingThread extends Thread {
 
     protected volatile boolean stopCondition = false;
 
-    private final Robot r;
+    private final PollutionMonitoring p;
 
-    public SensorDataPublishingThread(Robot r){
-        this.r = r;
+    public SensorDataPublishingThread(PollutionMonitoring p){
+        this.p = p;
     }
 
-    // bruttino che per quittare potrebbe stare vivo ancora 15 secondi prima di uscire
     @Override
     public void run() {
 
-        String id = r.getId();
-        BufferAverages buf = r.getBufferAverages();
+        String id = p.getRobot().getId();
+        BufferAverages buf = p.getBufferAverages();
 
-        String districtStr = r.getDistrict().toString();
+        String districtStr = p.getRobot().getDistrict().toString();
         String topic = "greenfield/pollution/district" + districtStr.charAt(districtStr.length() - 1);
 
-        MqttClient client = r.getMqttClient();
-        String clientId = r.getMqttClientId();
+        MqttClient client = p.getMqttClient();
+        String clientId = p.getMqttClientId();
 
         while (!stopCondition) {
             try {
