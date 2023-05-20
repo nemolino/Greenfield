@@ -22,11 +22,11 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+import robot.maintenance.Maintenance;
 import robot.pollution.PollutionMonitoring;
 import robot.gRPC_services.LeavingServiceImpl;
 import robot.gRPC_services.MaintenanceServiceImpl;
 import robot.gRPC_services.PresentationServiceImpl;
-import robot.maintenance.MaintenanceThread;
 import utils.exceptions.RegistrationFailureException;
 import utils.exceptions.RemovalFailureException;
 
@@ -49,6 +49,7 @@ public class Robot {
 
     private Server serverGRPC;
     private PollutionMonitoring p;
+    private Maintenance m;
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
         this.id = id;
@@ -93,7 +94,8 @@ public class Robot {
         p.turnOnPollutionPublishing();
 
         /* --- (thread start) ---------- starting to organize with the other robots the access to the maintenance --- */
-        turnOnMaintenance();
+        m = new Maintenance(this);
+        m.turnOnMaintenance();
 
         /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
         Scanner s = new Scanner(System.in);
@@ -106,7 +108,7 @@ public class Robot {
             if (input.equals("quit")) {
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
-                turnOffMaintenance();
+                m.turnOffMaintenance();
 
                 /* ------------------------------ notifying the other robots that I'm leaving Greenfield via gRPC --- */
                 leaving(id);
@@ -160,6 +162,9 @@ public class Robot {
     }
     public District getDistrict() {
         return district;
+    }
+    public Maintenance getMaintenance() {
+        return m;
     }
 
     // --------------------------------------------------------------------------------------- gRPC Server utilities ---
@@ -253,7 +258,7 @@ public class Robot {
                             .build())
                     .build();
 
-            stub.presentation(request, new StreamObserver<>() {
+            stub.presentation(request, new StreamObserver<PresentationResponse>() {
 
                 public void onNext(PresentationResponse response) {
                     successln("Presentation to " + x + " succeeded");
@@ -292,7 +297,7 @@ public class Robot {
             else
                 request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(id).build();
 
-            stub.leaving(request, new StreamObserver<>() {
+            stub.leaving(request, new StreamObserver<LeavingResponse>() {
 
                 public void onNext(LeavingResponse response) {
                     successln("I successfully notified " + x + " that " + leavingRobotId + " is leaving");
@@ -314,7 +319,6 @@ public class Robot {
     /*  sincronizzazione ok ?
         rimane public ?
         gestire meglio eccezioni sul removal
-        MAINTENANCE update
     */
     public void removeDeadRobot(RobotRepresentation x) {
 
@@ -342,34 +346,10 @@ public class Robot {
             errorln(e.toString());
         }
 
-        /* update maintenance structure */
-        maintenance.updatePendingMaintenanceRequests(x);
+        // update maintenance pending requests
+        m.getThread().updatePendingMaintenanceRequests(x);
 
         // notifying remaining otherRobots that x left the city (recursive)
         leaving(x.getId());
-    }
-
-    // ---------------------------------------------------------------------- Maintenance (da spostare e riguardare) ---
-
-    private MaintenanceThread maintenance;
-
-    private void turnOnMaintenance() {
-        maintenance = new MaintenanceThread(this);
-        maintenance.start();
-    }
-
-    private void turnOffMaintenance() {
-        maintenance.stopMeGently();
-        try {
-            maintenance.join();
-            warnln("... maintenance operations are finished");
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /* getters | setters */
-    public MaintenanceThread getMaintenance() {
-        return maintenance;
     }
 }
