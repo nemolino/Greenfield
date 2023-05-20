@@ -16,7 +16,7 @@ public class SensorDataProcessingThread extends Thread {
 
     public SensorDataProcessingThread(BufferAverages b){
 
-        this.s = new PM10Simulator(new BufferImpl());
+        this.s = new PM10Simulator(new BufferWindow());
         this.b = b;
     }
 

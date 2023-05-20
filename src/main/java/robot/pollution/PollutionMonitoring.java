@@ -6,7 +6,7 @@ import robot.Robot;
 
 import static utils.Printer.errorln;
 import static utils.Printer.logln;
-import static utils.Utils.MQTT_BROKER_ADDRESS;
+import static common.Configuration.MQTT_BROKER_ADDRESS;
 
 public class PollutionMonitoring {
 

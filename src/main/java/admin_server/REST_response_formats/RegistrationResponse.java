@@ -1,6 +1,6 @@
 package admin_server.REST_response_formats;
 
-import admin_server.RobotPosition;
+import common.Position;
 
 import java.util.List;
 
@@ -13,12 +13,12 @@ public class RegistrationResponse {
     @XmlElement(name="other_robots")
     private List<RobotRepresentation> otherRobots;
 
-    private RobotPosition position;
+    private Position position;
 
     private RegistrationResponse() {
     }
 
-    public RegistrationResponse(RobotPosition position, List<RobotRepresentation> otherRobots) {
+    public RegistrationResponse(Position position, List<RobotRepresentation> otherRobots) {
         this.position = position;
         this.otherRobots = otherRobots;
     }
@@ -31,11 +31,11 @@ public class RegistrationResponse {
         this.otherRobots = otherRobots;
     }
 
-    public RobotPosition getPosition() {
+    public Position getPosition() {
         return position;
     }
 
-    public void setPosition(RobotPosition position) {
+    public void setPosition(Position position) {
         this.position = position;
     }
 

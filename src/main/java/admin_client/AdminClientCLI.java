@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import static utils.Printer.*;
-import static utils.Utils.ADMIN_SERVER_ADDRESS;
+import static common.Configuration.ADMIN_SERVER_ADDRESS;
 
 public class AdminClientCLI {
 

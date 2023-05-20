@@ -1,17 +1,16 @@
-package admin_server;
+package common;
 
 import java.util.Random;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
-public class RobotPosition {
+public class Position {
     private int x;
     private int y;
 
-    private RobotPosition() {
-    }
+    private Position() {}
 
-    private RobotPosition(int x, int y) {
+    private Position(int x, int y) {
         this.x = x;
         this.y = y;
     }
@@ -32,7 +31,8 @@ public class RobotPosition {
         this.y = y;
     }
 
-    public static RobotPosition generateRobotPosition(District d) {
+    // generates a valid Position for a robot in District d
+    public static Position generateRobotPosition(District d) {
         Random r = new Random();
         int x = r.nextInt(5);
         if (d == District.D2 || d == District.D3)
@@ -40,16 +40,17 @@ public class RobotPosition {
         int y = r.nextInt(5);
         if (d == District.D3 || d == District.D4)
             y += 5;
-        return new RobotPosition(x, y);
+        return new Position(x, y);
     }
 
+    // returns the District associated to this Position
     public District getDistrict() {
         return (x < 5) ? ((y < 5) ? District.D1 : District.D4) : ((y < 5) ? District.D2 : District.D3);
     }
 
     @Override
     public String toString() {
-        return "(" + this.x + "," + this.y + ")";
+        return "(" + x + "," + y + ")";
     }
 }
 

@@ -1,7 +1,7 @@
 package robot;
 
-import admin_server.District;
-import admin_server.RobotPosition;
+import common.District;
+import common.Position;
 import admin_server.REST_response_formats.RobotRepresentation;
 import admin_server.REST_response_formats.RegistrationResponse;
 
@@ -42,7 +42,7 @@ public class Robot {
     private final int listeningPort;
     private final String adminServerAddress;
 
-    private RobotPosition position;
+    private Position position;
     private District district;
     private List<RobotRepresentation> otherRobots;
     private final Object otherRobotsLock = new Object();
@@ -86,7 +86,7 @@ public class Robot {
         }
         logln("... gRPC server on");
 
-        /* ----------------------------------------------- presentation to the other robots already in Greenfield --- */
+        /* -------------------------------------- presentation to the other robots already in Greenfield via gRPC --- */
         presentation();
 
         /* --- (thread start) ----------- starting to publish pollution levels into the MQTT topic of my district --- */
@@ -96,13 +96,9 @@ public class Robot {
         turnOnMaintenance();
 
         /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
-        cli();
-    }
-
-    private void cli() {
         Scanner s = new Scanner(System.in);
         String menu = "Insert:\t\t\"quit\" to remove this robot from the smart city\n" +
-                "\t\t\t \"fix\" to request the maintenance for this robot";
+                           "\t\t\t \"fix\" to request the maintenance for this robot";
         cliln(menu);
         while (true) {
             String input = s.next();
@@ -112,13 +108,13 @@ public class Robot {
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
                 turnOffMaintenance();
 
-                /* --------------------------------------- notifying the other robots that I'm leaving Greenfield --- */
+                /* ------------------------------ notifying the other robots that I'm leaving Greenfield via gRPC --- */
                 leaving(id);
 
-                /* --- (thread stop) ---------------------------- finishing to get data from air pollution sensor --- */
+                /* --- (thread stop) -------------------------------------- finishing pollution levels publishing --- */
                 p.turnOffPollutionPublishing();
 
-                /* --- (thread stop) -------------------------------------- finishing pollution levels publishing --- */
+                /* --- (thread stop) ---------------------------- finishing to get data from air pollution sensor --- */
                 p.turnOffPollutionProcessing();
 
                 /* --------------------------------------------- removal of this robot from Administration Server --- */
@@ -156,15 +152,12 @@ public class Robot {
     public String getId() {
         return id;
     }
-
     public Object getOtherRobotsLock() {
         return otherRobotsLock;
     }
-
     public List<RobotRepresentation> getOtherRobots() {
         return otherRobots;
     }
-
     public District getDistrict() {
         return district;
     }
@@ -184,7 +177,7 @@ public class Robot {
         }
     }
 
-    // ?? calls propagation ??
+    /* ?? calls propagation */
     private void shutdownServerGRPC() {
         try {
             // waiting 5 seconds for all the calls to be propagated
@@ -236,7 +229,8 @@ public class Robot {
             throw new RemovalFailureException("Removal failure");
     }
 
-    // ?? sincronizzazione è ok ??
+    /* sincronizzazione ok ? */
+    // presentation to the other robots already in Greenfield via gRPC
     private void presentation() {
 
         List<RobotRepresentation> otherRobotsCopy;
@@ -259,10 +253,10 @@ public class Robot {
                             .build())
                     .build();
 
-            stub.presentation(request, new StreamObserver<PresentationResponse>() {
+            stub.presentation(request, new StreamObserver<>() {
 
                 public void onNext(PresentationResponse response) {
-                    successln("Presentation to " + x + " succeded");
+                    successln("Presentation to " + x + " succeeded");
                 }
 
                 public void onError(Throwable throwable) {
@@ -277,7 +271,8 @@ public class Robot {
         }
     }
 
-    // ?? sincronizzazione è ok ??
+    /* sincronizzazione ok ? */
+    // notifying that the robot with a certain id is leaving Greenfield via gRPC
     private void leaving(String leavingRobotId) {
 
         List<RobotRepresentation> otherRobotsCopy;
@@ -295,9 +290,9 @@ public class Robot {
             if (Objects.equals(leavingRobotId, id))
                 request = LeavingRequest.newBuilder().setId(leavingRobotId).build();
             else
-                request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(this.id).build();
+                request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(id).build();
 
-            stub.leaving(request, new StreamObserver<LeavingResponse>() {
+            stub.leaving(request, new StreamObserver<>() {
 
                 public void onNext(LeavingResponse response) {
                     successln("I successfully notified " + x + " that " + leavingRobotId + " is leaving");
@@ -316,7 +311,11 @@ public class Robot {
 
     }
 
-    // ?? sincronizzazione è ok ??
+    /*  sincronizzazione ok ?
+        rimane public ?
+        gestire meglio eccezioni sul removal
+        MAINTENANCE update
+    */
     public void removeDeadRobot(RobotRepresentation x) {
 
         // removing x from otherRobots
@@ -336,9 +335,14 @@ public class Robot {
             errorln("Removing " + x + " also from AdminServer");
         } catch (RemovalFailureException e) {
             warnln("Someone already removed " + x + " from AdminServer");
+            errorln(e.toString());
+        } catch (Exception e) { // questa conviene che la prenda fuori
+            e.printStackTrace();
+            errorln("BAD ERROR calling removal in removeDeadRobot from AdminServer");
+            errorln(e.toString());
         }
 
-        /* ***** update maintenance structure ***** */
+        /* update maintenance structure */
         maintenance.updatePendingMaintenanceRequests(x);
 
         // notifying remaining otherRobots that x left the city (recursive)

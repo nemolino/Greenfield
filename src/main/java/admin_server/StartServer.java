@@ -13,8 +13,8 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static utils.Utils.ADMIN_SERVER_ADDRESS;
-import static utils.Utils.MQTT_BROKER_ADDRESS;
+import static common.Configuration.ADMIN_SERVER_ADDRESS;
+import static common.Configuration.MQTT_BROKER_ADDRESS;
 
 public class StartServer {
 

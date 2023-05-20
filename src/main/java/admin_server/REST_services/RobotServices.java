@@ -1,12 +1,12 @@
 package admin_server.REST_services;
 
-import admin_server.District;
+import common.District;
 import admin_server.REST_response_formats.RegistrationResponse;
-import admin_server.RobotPosition;
+import common.Position;
 import admin_server.REST_response_formats.RobotRepresentation;
 import admin_server.SmartCity;
 
-import static admin_server.RobotPosition.generateRobotPosition;
+import static common.Position.generateRobotPosition;
 import static utils.Printer.*;
 
 import javax.ws.rs.*;
@@ -35,7 +35,7 @@ public class RobotServices {
         }
 
         // building registration response
-        RobotPosition position = generateRobotPosition(districtAssignment);
+        Position position = generateRobotPosition(districtAssignment);
         List<RobotRepresentation> otherRobots = city.getRobotsList();
         for (RobotRepresentation x : otherRobots) {
             if (Objects.equals(x.getId(), r.getId())) {

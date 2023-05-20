@@ -6,14 +6,14 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-public class BufferImpl implements simulator.Buffer {
+public class BufferWindow implements simulator.Buffer {
 
     private final static int windowSize = 8;
     private final static int windowOverlap = 4;
 
     private final List<Measurement> l;
 
-    public BufferImpl() {
+    public BufferWindow() {
         this.l = new LinkedList<>();
     }
 
