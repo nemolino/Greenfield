@@ -28,7 +28,7 @@ public class Maintenance {
         }
     }
 
-    // GETTER
+    // getter
     public MaintenanceThread getThread() {
         return m;
     }

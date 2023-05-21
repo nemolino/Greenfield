@@ -1,4 +1,4 @@
-package robot.gRPC_services;
+package robot.network;
 
 import admin_server.REST_response_formats.RobotRepresentation;
 import com.example.grpc.LeavingServiceGrpc.LeavingServiceImplBase;
@@ -16,22 +16,21 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
 
     private final Robot r;
 
-    public LeavingServiceImpl(Robot r){
+    public LeavingServiceImpl(Robot r) {
         this.r = r;
     }
 
     @Override
-    public void leaving(LeavingRequest request, StreamObserver<LeavingResponse> responseObserver){
+    public void leaving(LeavingRequest request, StreamObserver<LeavingResponse> responseObserver) {
 
-        log("Leaving notification for R_" + request.getId() +
+        log("... received leaving notification for R_" + request.getId() +
                 " from R_" + (request.getSender().equals("") ? request.getId() : request.getSender()));
 
-
-        // updating otherRobots
+        // updating otherRobots, if needed
         synchronized (r.getOtherRobotsLock()) {
             List<RobotRepresentation> others = r.getOtherRobots();
-            for (RobotRepresentation x : others){
-                if (Objects.equals(x.getId(), request.getId())){
+            for (RobotRepresentation x : others) {
+                if (Objects.equals(x.getId(), request.getId())) {
                     others.remove(x);
                     break;
                 }
@@ -39,12 +38,12 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
             logln(" | otherRobots: " + others);
         }
 
-        // update maintenance pending requests
-        r.getMaintenance().getThread().updatePendingMaintenanceRequestsById(request.getId());
+        /* --- update maintenance pending requests */
+        //r.getMaintenance().getThread().updatePendingMaintenanceRequestsById(request.getId());
+        /* --- */
 
         LeavingResponse response = LeavingResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
-
 }

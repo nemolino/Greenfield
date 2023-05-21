@@ -22,9 +22,6 @@ import static utils.Printer.*;
  * Se un robot termina in modo controllato (con "quit") non succede nulla
  * perchè prima di terminare manda tutte le risposte che ha in sospeso.
  *
- * Se un robot termina in modo non controllato (con "quit") non succede nulla
- * perchè prima di terminare manda tutte le risposte che ha in sospeso.
- *
  */
 
 public class MaintenanceThread extends Thread {
@@ -167,7 +164,7 @@ public class MaintenanceThread extends Thread {
        return maintenanceRequestTimestamp != null && maintenanceRequestTimestamp < Long.parseLong(requestTimestamp);
     }
 
-    // GETTER
+    // getter
     public Object getMaintenanceResponsesLock() {
         return maintenanceResponsesLock;
     }

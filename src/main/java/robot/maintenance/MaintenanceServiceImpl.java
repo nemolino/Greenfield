@@ -1,4 +1,4 @@
-package robot.gRPC_services;
+package robot.maintenance;
 
 import com.example.grpc.MaintenanceServiceGrpc.MaintenanceServiceImplBase;
 import com.example.grpc.MaintenanceServiceOuterClass.*;

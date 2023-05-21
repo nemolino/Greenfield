@@ -1,4 +1,4 @@
-package robot;
+package robot.network;
 
 import admin_server.REST_response_formats.RobotRepresentation;
 import com.google.gson.Gson;

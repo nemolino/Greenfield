@@ -13,6 +13,11 @@ public class Main {
         cliln("robotID: " + id + " , port: " + listeningPort);
 
         Robot r = new Robot(id, listeningPort, ADMIN_SERVER_ADDRESS);
-        r.robotMain();
+        try{
+            r.robotMain();
+        }
+        catch (Exception e){
+            errorln("BAD ERROR - some exception has not been caught");
+        }
     }
 }
