@@ -19,7 +19,10 @@ public class Maintenance {
     }
 
     public void turnOffMaintenance() {
-        m.stopMeGently();
+        synchronized (m.fixLock){
+            m.stopMeGently();
+            m.fixLock.notify();
+        }
         try {
             m.join();
             warnln("... maintenance operations are finished");
@@ -28,7 +31,7 @@ public class Maintenance {
         }
     }
 
-    // getter
+    // getters
     public MaintenanceThread getThread() {
         return m;
     }

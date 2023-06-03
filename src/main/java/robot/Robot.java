@@ -100,7 +100,7 @@ public class Robot {
             String input = s.next();
 
             if (input.equals("quit")) {
-                successln("... quitting");
+                successln("... quit command");
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
                 m.turnOffMaintenance();
@@ -139,7 +139,11 @@ public class Robot {
                 logln("... gRPC server off");
                 break;
             } else if (input.equals("fix")) {
-                logln("... fix ...");
+                successln("... fix command");
+                synchronized (m.getThread().fixLock){
+                    m.getThread().fixCommand();
+                    m.getThread().fixLock.notify();
+                }
             } else
                 errorln("INVALID INPUT");
         }
@@ -332,7 +336,6 @@ public class Robot {
 
         /* --- update maintenance pending requests */
         m.getThread().updatePendingMaintenanceRequests(x);
-        /* --- */
 
         // notifying other robots that x left the city (recursive call)
         leaving(x.getId());

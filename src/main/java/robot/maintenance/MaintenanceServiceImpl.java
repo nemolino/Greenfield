@@ -23,9 +23,9 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
         mt = r.getMaintenance().getThread();
         Object responsesLock = mt.getMaintenanceResponsesLock();
 
-        logln("Maintenance access request from R_" + request.getId() + " with timestamp " + request.getTimestamp());
+        logln("Maintenance request from R_" + request.getId());// + " with timestamp " + request.getTimestamp());
 
-        while (mt.hasPriority(request.getTimestamp())){
+        while (mt.hasToWait(request.getTimestamp())){
             //System.out.println("... blocking maintenance response to " + request.getId());
             synchronized (responsesLock){
                 try {
