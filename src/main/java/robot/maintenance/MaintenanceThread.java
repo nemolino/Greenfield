@@ -33,7 +33,11 @@ public class MaintenanceThread extends Thread {
     private List<RobotRepresentation> otherRobotsCopy;
     private Long maintenanceRequestTimestamp = null;
     private Set<RobotRepresentation> pendingMaintenanceRequests = null;
+    private boolean requirinqMaintenance;
+    private boolean usingMaintenance;
 
+    private final Object accessMaintenanceLock = new Object();
+    private final Object structuresLock = new Object();
     private final Object maintenanceResponsesLock = new Object();
 
     public MaintenanceThread(Robot r) {
@@ -44,11 +48,16 @@ public class MaintenanceThread extends Thread {
     public void run() {
         while (!stopCondition) {
             try {
-                Thread.sleep(2000);
+                Thread.sleep(10000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            if (Math.random() < 0.3) {
+            if (stopCondition){
+                synchronized (maintenanceResponsesLock) {
+                    maintenanceResponsesLock.notifyAll();
+                }
+            }
+            else if (Math.random() < 0.1) {
                 System.out.println(LocalTime.now() + " - I need maintenance!");
                 accessMaintenance();
             }
@@ -59,8 +68,9 @@ public class MaintenanceThread extends Thread {
         stopCondition = true;
     }
 
-    synchronized public void accessMaintenance() {
+    public void accessMaintenance() {
 
+        requirinqMaintenance = true;
         maintenanceRequestTimestamp = System.currentTimeMillis();
         synchronized (r.getOtherRobotsLock()) {
             otherRobotsCopy = new ArrayList<>(r.getOtherRobots());
@@ -72,7 +82,11 @@ public class MaintenanceThread extends Thread {
         // waiting for all the responses
         while (pendingMaintenanceRequests.size() > 0) {
             try {
-                wait();
+                //logln("PRIMA sveglio " + pendingMaintenanceRequests.size());
+                synchronized (accessMaintenanceLock){
+                    accessMaintenanceLock.wait();
+                }
+                //logln("DOPO  sveglio " + pendingMaintenanceRequests.size());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -80,8 +94,9 @@ public class MaintenanceThread extends Thread {
 
         doMaintenance(); // CRITICAL SECTION
 
-        maintenanceRequestTimestamp = null;
         pendingMaintenanceRequests = null;
+        maintenanceRequestTimestamp = null;
+        requirinqMaintenance = false;
 
         synchronized (maintenanceResponsesLock) {
             maintenanceResponsesLock.notifyAll();
@@ -110,7 +125,7 @@ public class MaintenanceThread extends Thread {
                 }
 
                 public void onError(Throwable throwable) {
-                    errorln(throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
+                    errorln("QUI  " + throwable.getMessage() + " | Notifying otherRobots that " + x + " left the city!");
                     r.removeDeadRobot(x);
                 }
 
@@ -122,46 +137,67 @@ public class MaintenanceThread extends Thread {
     }
 
     private void doMaintenance() {
+        usingMaintenance = true;
         successln(LocalTime.now() + " ... ENTER maintenance");
         try {
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         successln(LocalTime.now() + " ...  EXIT maintenance");
+        usingMaintenance = false;
     }
 
-    synchronized public void updatePendingMaintenanceRequests(RobotRepresentation x) {
-        if (pendingMaintenanceRequests != null) {
-            if (pendingMaintenanceRequests.contains(x)) {
-                pendingMaintenanceRequests.remove(x);
-                System.out.println(LocalTime.now() + " - pending - { " + x + " } = " + pendingMaintenanceRequests);
-                successln("GOOD - rimozione corretta");
-                notify();
-            }
-            else errorln("WARN - robot not in pendingMaintenanceRequests");
-        }
-        else errorln("WARN - null pendingMaintenanceRequests");
-    }
-
-   synchronized public void updatePendingMaintenanceRequestsById(String id) {
-        if (pendingMaintenanceRequests != null) {
-            for (RobotRepresentation x : pendingMaintenanceRequests) {
-                if (x.getId() == id) {
+    public void updatePendingMaintenanceRequests(RobotRepresentation x) {
+        synchronized (structuresLock) {
+            if (pendingMaintenanceRequests != null) {
+                if (pendingMaintenanceRequests.contains(x)) {
                     pendingMaintenanceRequests.remove(x);
                     System.out.println(LocalTime.now() + " - pending - { " + x + " } = " + pendingMaintenanceRequests);
-                    successln("GOOD by id - rimozione corretta");
-                    notify();
-                    return;
+                    //successln("GOOD - rimozione corretta");
+                    if (pendingMaintenanceRequests.size() == 0){
+                        synchronized (accessMaintenanceLock){
+                            accessMaintenanceLock.notify();
+                        }
+                        //errorln("notifyAll fatto");
+                    }
+
                 }
+                else errorln("WARN - robot not in pendingMaintenanceRequests");
             }
-            errorln("WARN by id - robot not in pendingMaintenanceRequests");
+            else errorln("WARN - null pendingMaintenanceRequests");
         }
-        else errorln("WARN by id - null pendingMaintenanceRequests");
+
     }
 
-    synchronized public boolean hasPriority(String requestTimestamp){
-       return maintenanceRequestTimestamp != null && maintenanceRequestTimestamp < Long.parseLong(requestTimestamp);
+    public void updatePendingMaintenanceRequestsById(String id) {
+        synchronized (structuresLock) {
+            if (pendingMaintenanceRequests != null) {
+                for (RobotRepresentation x : pendingMaintenanceRequests) {
+                    if (Objects.equals(x.getId(), id)) {
+                        pendingMaintenanceRequests.remove(x);
+                        System.out.println(LocalTime.now() + " - pending - { " + x + " } = " + pendingMaintenanceRequests);
+                        errorln("GOOD by id - rimozione corretta");
+                        if (pendingMaintenanceRequests.size() == 0) {
+                            synchronized (accessMaintenanceLock) {
+                                accessMaintenanceLock.notify();
+                            }
+                            errorln("notifyAll fatto");
+                        }
+                        return;
+                    }
+                }
+                errorln("WARN by id - robot not in pendingMaintenanceRequests");
+            } else errorln("WARN by id - null pendingMaintenanceRequests");
+        }
+    }
+
+    public boolean hasPriority(String requestTimestamp){
+        synchronized (structuresLock) {
+            return usingMaintenance || (requirinqMaintenance &&
+                                        maintenanceRequestTimestamp != null &&
+                                        maintenanceRequestTimestamp < Long.parseLong(requestTimestamp));
+        }
     }
 
     // getter

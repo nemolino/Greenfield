@@ -88,8 +88,8 @@ public class Robot {
         //p.turnOnPollutionPublishing();
 
         /* --- (thread start) ---------- starting to organize with the other robots the access to the maintenance --- */
-        //m = new Maintenance(this);
-        //m.turnOnMaintenance();
+        m = new Maintenance(this);
+        m.turnOnMaintenance();
 
         /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
         Scanner s = new Scanner(System.in);
@@ -100,9 +100,10 @@ public class Robot {
             String input = s.next();
 
             if (input.equals("quit")) {
+                successln("... quitting");
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
-                //m.turnOffMaintenance();
+                m.turnOffMaintenance();
 
                 /* ------------------------------ notifying the other robots that I'm leaving Greenfield via gRPC --- */
                 leaving(id);
@@ -144,7 +145,7 @@ public class Robot {
         }
     }
 
-    // ------------------------------------------------------------------------------------- useful Getters & Setters ---
+    // ------------------------------------------------------------------------------------------- Getters & Setters ---
 
     public String getId() {
         return id;
@@ -330,7 +331,7 @@ public class Robot {
         }
 
         /* --- update maintenance pending requests */
-        //m.getThread().updatePendingMaintenanceRequests(x);
+        m.getThread().updatePendingMaintenanceRequests(x);
         /* --- */
 
         // notifying other robots that x left the city (recursive call)

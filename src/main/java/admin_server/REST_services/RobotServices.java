@@ -30,7 +30,7 @@ public class RobotServices {
         try {
             districtAssignment = city.add(r);
         } catch (Exception e) {
-            warn(e.getMessage());
+            warnln(e.getMessage() + "\n");
             return Response.status(404).build();
         }
 
@@ -58,7 +58,7 @@ public class RobotServices {
         try {
             SmartCity.getInstance().remove(id);
         } catch (Exception e) {
-            warn(e.getMessage());
+            warnln(e.getMessage() + "\n");
             return Response.status(404).build();
         }
 

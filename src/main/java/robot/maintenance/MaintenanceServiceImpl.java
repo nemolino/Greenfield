@@ -26,7 +26,7 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
         logln("Maintenance access request from R_" + request.getId() + " with timestamp " + request.getTimestamp());
 
         while (mt.hasPriority(request.getTimestamp())){
-            System.out.println("... blocking maintenance response to " + request.getId());
+            //System.out.println("... blocking maintenance response to " + request.getId());
             synchronized (responsesLock){
                 try {
                     responsesLock.wait();
@@ -35,7 +35,7 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
                 }
             }
         }
-        System.out.println("... sending maintenance response to " + request.getId());
+        //System.out.println("... sending maintenance response to " + request.getId());
 
         MaintenanceResponse response = MaintenanceResponse.newBuilder().build();
         responseObserver.onNext(response);

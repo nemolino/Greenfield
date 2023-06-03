@@ -39,7 +39,7 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
         }
 
         /* --- update maintenance pending requests */
-        //r.getMaintenance().getThread().updatePendingMaintenanceRequestsById(request.getId());
+        r.getMaintenance().getThread().updatePendingMaintenanceRequestsById(request.getId());
         /* --- */
 
         LeavingResponse response = LeavingResponse.newBuilder().build();
