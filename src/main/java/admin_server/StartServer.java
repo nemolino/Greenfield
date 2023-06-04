@@ -1,6 +1,6 @@
 package admin_server;
 
-import static utils.Printer.*;
+import static common.Printer.*;
 
 import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;
@@ -19,6 +19,9 @@ import static common.Configuration.MQTT_BROKER_ADDRESS;
 public class StartServer {
 
     public static void main(String[] args) throws IOException {
+
+
+
         Logger.getLogger("com.sun.jersey").setLevel(Level.SEVERE);
 
         HttpServer server = HttpServerFactory.create(ADMIN_SERVER_ADDRESS + "/");

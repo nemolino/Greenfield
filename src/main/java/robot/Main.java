@@ -1,6 +1,6 @@
 package robot;
 
-import static utils.Printer.*;
+import static common.Printer.*;
 import static common.Configuration.ADMIN_SERVER_ADDRESS;
 
 public class Main {

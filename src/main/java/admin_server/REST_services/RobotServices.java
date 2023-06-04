@@ -7,7 +7,7 @@ import admin_server.REST_response_formats.RobotRepresentation;
 import admin_server.SmartCity;
 
 import static common.Position.generateRobotPosition;
-import static utils.Printer.*;
+import static common.Printer.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;

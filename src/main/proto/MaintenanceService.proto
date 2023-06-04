@@ -8,6 +8,10 @@ message MaintenanceRequest {
 
 message MaintenanceResponse {}
 
+message HeartbeatRequest {}
+message HeartbeatResponse {}
+
 service MaintenanceService {
   rpc maintenance(MaintenanceRequest) returns (MaintenanceResponse);
+  rpc heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
 }

@@ -1,4 +1,4 @@
-package utils.exceptions;
+package common.exceptions;
 
 public class RegistrationFailureException extends Exception {
     public RegistrationFailureException(String errorMessage) {

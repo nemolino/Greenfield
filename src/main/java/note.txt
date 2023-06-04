@@ -23,6 +23,16 @@ SensorDataProcessing    acts like a CONSUMER, gets windows of 8 Measurement(s) f
 SensorDataProcessing    acts like a PRODUCER, puts avg of windows in BufferAverages
 SensorDataPublishing    acts like a CONSUMER, gets avg windows from BufferAverages and publish them via MQTT
 
-TODO
-- controlla sync su otherRobots
-- maintenance (HA DEADLOCK ANCHE SENZA ROBOT CHE CRASHANO)
+TODO - risolvi gli errori di questo tipo
+
+Jun 04, 2023 2:53:52 PM io.grpc.internal.ManagedChannelOrphanWrapper$ManagedChannelReference cleanQueue
+SEVERE: *~*~*~ Channel ManagedChannelImpl{logId=31, target=localhost:2223} was not shutdown properly!!! ~*~*~*
+    Make sure to call shutdown()/shutdownNow() and wait until awaitTermination() returns true.
+java.lang.RuntimeException: ManagedChannel allocation site
+	at io.grpc.internal.ManagedChannelOrphanWrapper$ManagedChannelReference.<init>(ManagedChannelOrphanWrapper.java:94)
+	at io.grpc.internal.ManagedChannelOrphanWrapper.<init>(ManagedChannelOrphanWrapper.java:52)
+	at io.grpc.internal.ManagedChannelOrphanWrapper.<init>(ManagedChannelOrphanWrapper.java:43)
+	at io.grpc.internal.AbstractManagedChannelImplBuilder.build(AbstractManagedChannelImplBuilder.java:524)
+	at robot.maintenance.MaintenanceThread.sendMaintenanceRequests(MaintenanceThread.java:126)
+	at robot.maintenance.MaintenanceThread.accessMaintenance(MaintenanceThread.java:90)
+	at robot.maintenance.MaintenanceThread.run(MaintenanceThread.java:68)

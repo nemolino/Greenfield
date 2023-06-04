@@ -10,7 +10,7 @@ import com.sun.jersey.api.client.WebResource;
 import java.util.List;
 import java.util.Scanner;
 
-import static utils.Printer.*;
+import static common.Printer.*;
 import static common.Configuration.ADMIN_SERVER_ADDRESS;
 
 public class AdminClientCLI {

@@ -2,7 +2,7 @@ package robot.maintenance;
 
 import robot.Robot;
 
-import static utils.Printer.warnln;
+import static common.Printer.warnln;
 
 public class Maintenance {
 

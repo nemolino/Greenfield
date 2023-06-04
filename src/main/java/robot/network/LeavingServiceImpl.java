@@ -9,8 +9,8 @@ import robot.Robot;
 import java.util.List;
 import java.util.Objects;
 
-import static utils.Printer.log;
-import static utils.Printer.logln;
+import static common.Printer.log;
+import static common.Printer.logln;
 
 public class LeavingServiceImpl extends LeavingServiceImplBase {
 
@@ -38,7 +38,7 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
             logln(" | otherRobots: " + others);
         }
 
-        /* --- update maintenance pending requests */
+        // update maintenance pending requests
         r.getMaintenance().getThread().updatePendingMaintenanceRequestsById(request.getId());
 
         LeavingResponse response = LeavingResponse.newBuilder().build();

@@ -26,14 +26,14 @@ import robot.maintenance.Maintenance;
 import robot.network.LeavingServiceImpl;
 import robot.maintenance.MaintenanceServiceImpl;
 import robot.network.PresentationServiceImpl;
-import utils.exceptions.RegistrationFailureException;
-import utils.exceptions.RemovalFailureException;
+import common.exceptions.RegistrationFailureException;
+import common.exceptions.RemovalFailureException;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static robot.network.RequestsHTTP.*;
-import static utils.Printer.*;
+import static common.Printer.*;
 
 public class Robot {
 
@@ -65,7 +65,7 @@ public class Robot {
             return;
         }
         successln("... registration to AdminServer succeeded " +
-                "--> Position: " + position + " , otherRobots: " + otherRobots);
+                "--> position: " + position + " , otherRobots: " + otherRobots);
 
         /* --- (thread start) ------------------------------------ starting to get data from air pollution sensor --- */
         //PollutionMonitoring p = new PollutionMonitoring(this);
@@ -140,10 +140,12 @@ public class Robot {
                 break;
             } else if (input.equals("fix")) {
                 successln("... fix command");
+
                 synchronized (m.getThread().fixLock){
                     m.getThread().fixCommand();
                     m.getThread().fixLock.notify();
                 }
+
             } else
                 errorln("INVALID INPUT");
         }
@@ -182,11 +184,10 @@ public class Robot {
         }
     }
 
-    /* ?? calls propagation */
     private void shutdownServerGRPC() {
         try {
-            // waiting 5 seconds for all the calls to be propagated
-            serverGRPC.awaitTermination(5, TimeUnit.SECONDS);
+            // waiting 3 seconds for all the calls to be propagated
+            serverGRPC.awaitTermination(3, TimeUnit.SECONDS);
             serverGRPC.shutdown();
         } catch (Exception e) {
             throw new RuntimeException("Unable to shutdown gRPC server properly");
@@ -236,7 +237,7 @@ public class Robot {
 
     // --------------------------------------------------------------------------- robot network management via gRPC ---
 
-    // presentation to the other robots already in Greenfield via gRPC
+    // presentation to the other robots already in Greenfield
     private void presentation() {
 
         List<RobotRepresentation> otherRobotsCopy;
@@ -262,10 +263,13 @@ public class Robot {
             stub.presentation(request, new StreamObserver<PresentationResponse>() {
 
                 public void onNext(PresentationResponse response) {
-                    successln("Presentation to " + x + " succeeded");
+                    successln("... presentation to " + x + " succeeded");
                 }
 
-                public void onError(Throwable throwable) { removeDeadRobot(x); }
+                public void onError(Throwable throwable) {
+                    errorln(x + " is dead [presentation]");
+                    removeDeadRobot(x);
+                }
 
                 public void onCompleted() {
                     channel.shutdownNow();
@@ -274,7 +278,7 @@ public class Robot {
         }
     }
 
-    // notifying other robots that the robot with a certain id is leaving Greenfield via gRPC
+    // notifying other robots that the robot with a certain id is leaving Greenfield
     private void leaving(String leavingRobotId) {
 
         List<RobotRepresentation> others;
@@ -297,10 +301,13 @@ public class Robot {
             stub.leaving(request, new StreamObserver<LeavingResponse>() {
 
                 public void onNext(LeavingResponse response) {
-                    successln("I successfully notified " + x + " that " + leavingRobotId + " is leaving");
+                    successln("Notified " + x + " that " +
+                            ((Objects.equals(id, leavingRobotId)) ? "I'm " : "R_" + leavingRobotId + " is ") + "leaving");
                 }
 
-                public void onError(Throwable throwable) { removeDeadRobot(x); }
+                public void onError(Throwable throwable) {
+                    errorln(x + " is dead [leaving]");
+                    removeDeadRobot(x); }
 
                 public void onCompleted() {
                     channel.shutdownNow();
@@ -312,8 +319,6 @@ public class Robot {
 
     public void removeDeadRobot(RobotRepresentation x) {
 
-        error("... notifying otherRobots that " + x + " is dead | ");
-
         // removing x from otherRobots
         synchronized (otherRobotsLock) {
             for (RobotRepresentation y : otherRobots) {
@@ -322,22 +327,22 @@ public class Robot {
                     break;
                 }
             }
-            errorln("otherRobots: " + otherRobots);
         }
 
         // removing x from AdminServer
         try {
+            errorln("... removing " + x + " from AdminServer");
             removal(x.getId());
-            errorln("... removed " + x + " also from AdminServer");
         } catch (RemovalFailureException e) {
             warnln("... someone already removed " + x + " from AdminServer");
             errorln(e.toString());
         }
 
-        /* --- update maintenance pending requests */
+        // update maintenance pending requests
         m.getThread().updatePendingMaintenanceRequests(x);
 
-        // notifying other robots that x left the city (recursive call)
+        // notifying other robots that x is dead
+        errorln("... notifying otherRobots that " + x + " is dead");
         leaving(x.getId());
     }
 }

@@ -9,8 +9,8 @@ import robot.Robot;
 import java.util.Objects;
 import java.util.List;
 
-import static utils.Printer.log;
-import static utils.Printer.logln;
+import static common.Printer.log;
+import static common.Printer.logln;
 
 public class PresentationServiceImpl extends PresentationServiceImplBase {
 

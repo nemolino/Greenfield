@@ -5,7 +5,7 @@ import simulator.PM10Simulator;
 
 import java.util.List;
 
-import static utils.Printer.warnln;
+import static common.Printer.warnln;
 
 public class SensorDataProcessingThread extends Thread {
 

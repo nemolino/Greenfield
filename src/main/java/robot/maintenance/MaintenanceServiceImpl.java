@@ -4,14 +4,12 @@ import com.example.grpc.MaintenanceServiceGrpc.MaintenanceServiceImplBase;
 import com.example.grpc.MaintenanceServiceOuterClass.*;
 import io.grpc.stub.StreamObserver;
 import robot.Robot;
-import robot.maintenance.MaintenanceThread;
 
-import static utils.Printer.logln;
+import static common.Printer.logln;
 
 public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
 
     private final Robot r;
-    private MaintenanceThread mt;
 
     public MaintenanceServiceImpl(Robot r) {
         this.r = r;
@@ -20,24 +18,31 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
     @Override
     public void maintenance(MaintenanceRequest request, StreamObserver<MaintenanceResponse> responseObserver) {
 
-        mt = r.getMaintenance().getThread();
-        Object responsesLock = mt.getMaintenanceResponsesLock();
+        logln("R_" + request.getId() + " wants to access maintenance");// + " with timestamp " + request.getTimestamp());
 
-        logln("Maintenance request from R_" + request.getId());// + " with timestamp " + request.getTimestamp());
+        MaintenanceThread m = r.getMaintenance().getThread();
 
-        while (mt.hasToWait(request.getTimestamp())){
-            //System.out.println("... blocking maintenance response to " + request.getId());
-            synchronized (responsesLock){
+        while (m.hasToWait(request.getTimestamp())){
+            //System.out.println("... blocking maintenance response to R_" + request.getId());
+            synchronized (m.sendResponseLock){
                 try {
-                    responsesLock.wait();
+                    m.sendResponseLock.wait();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
         }
-        //System.out.println("... sending maintenance response to " + request.getId());
+        //System.out.println("... sending maintenance response to R_" + request.getId());
 
         MaintenanceResponse response = MaintenanceResponse.newBuilder().build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void heartbeat(HeartbeatRequest request, StreamObserver<HeartbeatResponse> responseObserver) {
+
+        HeartbeatResponse response = HeartbeatResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
