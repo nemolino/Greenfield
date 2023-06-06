@@ -4,6 +4,7 @@ import admin_server.REST_response_formats.RobotRepresentation;
 import com.example.grpc.MaintenanceServiceGrpc;
 import com.example.grpc.MaintenanceServiceOuterClass.MaintenanceRequest;
 import com.example.grpc.MaintenanceServiceOuterClass.MaintenanceResponse;
+import common.printer.Type;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -11,9 +12,8 @@ import robot.Robot;
 
 import java.time.LocalTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
-import static common.Printer.*;
+import static common.printer.Printer.*;
 
 /*
  * Se si aggiunge un nuovo robot e io ho già mandato le richieste senza considerare lui
@@ -37,7 +37,7 @@ public class MaintenanceThread extends Thread {
     private Set<RobotRepresentation> pendingRequests = null;
     private boolean usingMaintenance;
 
-    public final Object fixLock = new Object();
+    private final Object fixLock = new Object();
     public final Object sendResponseLock = new Object();
     private final Object accessMaintenanceLock = new Object();
     private final Object structuresLock = new Object();
@@ -64,7 +64,7 @@ public class MaintenanceThread extends Thread {
                 }
             }
             else if (Math.random() < 0.1 || fixCommand) {
-                System.out.println(LocalTime.now() + " - I need maintenance!");
+                log(Type.M, "... " + LocalTime.now() + " - ⚠\uFE0F I need maintenance!");
                 accessMaintenance();
                 fixCommand = false;
             }
@@ -73,25 +73,25 @@ public class MaintenanceThread extends Thread {
 
     public void stopMeGently() {
         stopCondition = true;
+        synchronized (fixLock){
+            fixLock.notify();
+        }
     }
 
     public void fixCommand() {
         fixCommand = true;
+        synchronized (fixLock){
+            fixLock.notify();
+        }
     }
 
     public void accessMaintenance() {
 
         requestTimestamp = System.currentTimeMillis();
-        synchronized (r.getOtherRobotsLock()) {
-            otherRobotsCopy = new ArrayList<>(r.getOtherRobots());
-        }
+        otherRobotsCopy = r.getOtherRobotsCopy();
         pendingRequests = new HashSet<>(otherRobotsCopy);
 
         sendMaintenanceRequests();
-
-
-        HeartbeatThread h = new HeartbeatThread(r, structuresLock, pendingRequests);
-        h.start();
 
         // waiting for all the responses
         while (pendingRequests.size() > 0) {
@@ -103,8 +103,6 @@ public class MaintenanceThread extends Thread {
                 throw new RuntimeException(e);
             }
         }
-
-        h.stopMeGently();
 
         maintenanceOperation(); // CRITICAL SECTION
 
@@ -118,7 +116,7 @@ public class MaintenanceThread extends Thread {
 
     private void sendMaintenanceRequests() {
 
-        System.out.println(LocalTime.now() + " - pending = " + pendingRequests);
+        log(Type.M_LOW, "... pending = " + pendingRequests);
 
         for (RobotRepresentation x : otherRobotsCopy) {
 
@@ -138,8 +136,9 @@ public class MaintenanceThread extends Thread {
                 }
 
                 public void onError(Throwable throwable) {
-                    errorln(x + " is dead [sendMaintenanceRequests]");
-                    r.removeDeadRobot(x);
+                    error(Type.N, "... " + x + " is dead [sendMaintenanceRequests]");
+                    r.network().removeDeadRobot(x);
+                    channel.shutdownNow();
                 }
 
                 public void onCompleted() {
@@ -151,13 +150,13 @@ public class MaintenanceThread extends Thread {
 
     private void maintenanceOperation() {
         usingMaintenance = true;
-        successln(LocalTime.now() + " ... ENTER maintenance");
+        log(Type.M, "... " + LocalTime.now() + " - \uD83D\uDC68\uD83C\uDFFB\u200D\uD83D\uDD27 ENTER maintenance");
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        successln(LocalTime.now() + " ...  EXIT maintenance");
+        log(Type.M, "... " + LocalTime.now() + " - \uD83D\uDC68\uD83C\uDFFB\u200D\uD83D\uDD27  EXIT maintenance");
         usingMaintenance = false;
     }
 
@@ -181,7 +180,7 @@ public class MaintenanceThread extends Thread {
 
     private void removePendingRequest(RobotRepresentation x){
         pendingRequests.remove(x);
-        System.out.println(LocalTime.now() + " - pending - { " + x + " } = " + pendingRequests);
+        log(Type.M_LOW, "... pending \\ { " + x + " } = " + pendingRequests);
         if (pendingRequests.size() == 0){
             synchronized (accessMaintenanceLock){
                 accessMaintenanceLock.notify();
@@ -193,6 +192,12 @@ public class MaintenanceThread extends Thread {
         synchronized (structuresLock) {
             return usingMaintenance || (requestTimestamp != null &&
                                         requestTimestamp < Long.parseLong(otherRequestTimestamp));
+        }
+    }
+
+    public List<RobotRepresentation> getPendingRequestsCopy(){
+        synchronized (structuresLock) {
+            return (pendingRequests != null) ? new ArrayList<>(pendingRequests) : null;
         }
     }
 

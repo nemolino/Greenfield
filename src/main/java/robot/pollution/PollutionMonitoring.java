@@ -4,8 +4,8 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import robot.Robot;
 
-import static common.Printer.errorln;
-import static common.Printer.logln;
+import static common.printer.Printer.errorln;
+import static common.printer.Printer.logln;
 import static common.Configuration.MQTT_BROKER_ADDRESS;
 
 public class PollutionMonitoring {

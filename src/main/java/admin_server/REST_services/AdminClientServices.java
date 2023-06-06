@@ -12,7 +12,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
-import static common.Printer.*;
+import static common.printer.Printer.*;
 
 @Path("query")
 public class AdminClientServices {

@@ -6,7 +6,7 @@ import common.District;
 
 import java.util.*;
 
-import static common.Printer.*;
+import static common.printer.Printer.*;
 
 public class SmartCity {
 

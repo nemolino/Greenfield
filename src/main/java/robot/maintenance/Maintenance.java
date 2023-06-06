@@ -1,8 +1,10 @@
 package robot.maintenance;
 
+import common.printer.Type;
 import robot.Robot;
 
-import static common.Printer.warnln;
+import static common.printer.Printer.log;
+import static common.printer.Printer.warn;
 
 public class Maintenance {
 
@@ -19,19 +21,16 @@ public class Maintenance {
     }
 
     public void turnOffMaintenance() {
-        synchronized (m.fixLock){
-            m.stopMeGently();
-            m.fixLock.notify();
-        }
+        m.stopMeGently();
         try {
             m.join();
-            warnln("... maintenance operations are finished");
+            log(Type.M, "... maintenance operations are finished");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
-    // getters
+    // getter
     public MaintenanceThread getThread() {
         return m;
     }

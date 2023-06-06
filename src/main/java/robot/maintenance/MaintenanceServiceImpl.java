@@ -2,10 +2,12 @@ package robot.maintenance;
 
 import com.example.grpc.MaintenanceServiceGrpc.MaintenanceServiceImplBase;
 import com.example.grpc.MaintenanceServiceOuterClass.*;
+import common.printer.Type;
 import io.grpc.stub.StreamObserver;
 import robot.Robot;
 
-import static common.Printer.logln;
+import static common.printer.Printer.log;
+import static common.printer.Printer.logln;
 
 public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
 
@@ -18,7 +20,7 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
     @Override
     public void maintenance(MaintenanceRequest request, StreamObserver<MaintenanceResponse> responseObserver) {
 
-        logln("R_" + request.getId() + " wants to access maintenance");// + " with timestamp " + request.getTimestamp());
+        log(Type.M, "... R_" + request.getId() + " needs maintenance");
 
         MaintenanceThread m = r.getMaintenance().getThread();
 
@@ -35,14 +37,6 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
         //System.out.println("... sending maintenance response to R_" + request.getId());
 
         MaintenanceResponse response = MaintenanceResponse.newBuilder().build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-    }
-
-    @Override
-    public void heartbeat(HeartbeatRequest request, StreamObserver<HeartbeatResponse> responseObserver) {
-
-        HeartbeatResponse response = HeartbeatResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }

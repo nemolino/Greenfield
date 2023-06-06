@@ -1,6 +1,6 @@
 package admin_server;
 
-import static common.Printer.*;
+import static common.printer.Printer.*;
 
 import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;

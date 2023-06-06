@@ -2,50 +2,33 @@ package robot.network;
 
 import admin_server.REST_response_formats.RobotRepresentation;
 import com.example.grpc.PresentationServiceGrpc.PresentationServiceImplBase;
-import com.example.grpc.PresentationServiceOuterClass.*;
+import com.example.grpc.PresentationServiceOuterClass.PresentationRequest;
+import com.example.grpc.PresentationServiceOuterClass.PresentationResponse;
+import common.printer.Type;
 import io.grpc.stub.StreamObserver;
 import robot.Robot;
 
-import java.util.Objects;
-import java.util.List;
-
-import static common.Printer.log;
-import static common.Printer.logln;
+import static common.printer.Printer.info;
 
 public class PresentationServiceImpl extends PresentationServiceImplBase {
 
     private final Robot r;
 
-    public PresentationServiceImpl(Robot r){
-            this.r = r;
+    public PresentationServiceImpl(Robot r) {
+        this.r = r;
     }
 
     @Override
-    public void presentation(PresentationRequest request, StreamObserver<PresentationResponse> responseObserver){
+    public void presentation(PresentationRequest request, StreamObserver<PresentationResponse> responseObserver) {
 
-        log("... receveid presentation of R_" + request.getId() +
-                " at port " + request.getPort() +
-                " placed in (" + request.getPosition().getX() + "," + request.getPosition().getY() + ")" );
+        info(Type.N, "... R_" + request.getId() + " is entering Greenfield ( port: " + request.getPort() +
+                " , position: (" + request.getPosition().getX() + "," + request.getPosition().getY() + ") )");
 
-        // updating otherRobots, if needed
-        synchronized (r.getOtherRobotsLock()) {
-            List<RobotRepresentation> others = r.getOtherRobots();
-            boolean alreadyKnown = false;
-            for (RobotRepresentation x : others){
-                if (Objects.equals(x.getId(), request.getId())){
-                    alreadyKnown = true;
-                    break;
-                }
-            }
-            if (!alreadyKnown){
-                others.add(new RobotRepresentation(request.getId(), "localhost", request.getPort()));
-            }
-            logln("  | otherRobots: " + others);
-        }
+        // updating otherRobots
+        r.addToOtherRobots(new RobotRepresentation(request.getId(), "localhost", request.getPort()));
 
         PresentationResponse response = PresentationResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
-
 }

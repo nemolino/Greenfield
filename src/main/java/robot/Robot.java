@@ -3,37 +3,20 @@ package robot;
 import common.District;
 import common.Position;
 import admin_server.REST_response_formats.RobotRepresentation;
-import admin_server.REST_response_formats.RegistrationResponse;
 
-import com.example.grpc.PresentationServiceGrpc;
-import com.example.grpc.PresentationServiceGrpc.PresentationServiceStub;
-import com.example.grpc.PresentationServiceOuterClass.PresentationRequest;
-import com.example.grpc.PresentationServiceOuterClass.PresentationResponse;
-
-import com.example.grpc.LeavingServiceGrpc;
-import com.example.grpc.LeavingServiceGrpc.LeavingServiceStub;
-import com.example.grpc.LeavingServiceOuterClass.LeavingRequest;
-import com.example.grpc.LeavingServiceOuterClass.LeavingResponse;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import common.printer.Type;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import io.grpc.stub.StreamObserver;
+import robot.network.*;
 import robot.maintenance.Maintenance;
-import robot.network.LeavingServiceImpl;
 import robot.maintenance.MaintenanceServiceImpl;
-import robot.network.PresentationServiceImpl;
 import common.exceptions.RegistrationFailureException;
 import common.exceptions.RemovalFailureException;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static robot.network.RequestsHTTP.*;
-import static common.Printer.*;
+import static common.printer.Printer.*;
 
 public class Robot {
 
@@ -46,7 +29,7 @@ public class Robot {
     private List<RobotRepresentation> otherRobots;
     private final Object otherRobotsLock = new Object();
 
-    private Server serverGRPC;
+    private Network n;
     private Maintenance m;
 
     public Robot(String id, int listeningPort, String adminServerAddress) {
@@ -57,32 +40,34 @@ public class Robot {
 
     public void robotMain() {
 
+        n = new Network(this);
+
         /* -------------------------------------------------- registration of this robot to Administration Server --- */
         try {
-            registration();
+            n.registration();
         } catch (RegistrationFailureException e) {
-            errorln(e.toString());
+            error(Type.N, "... registration to AdminServer failed - " + e.getMessage());
             return;
         }
-        successln("... registration to AdminServer succeeded " +
-                "--> position: " + position + " , otherRobots: " + otherRobots);
+        info(Type.N, "... registration to AdminServer succeeded - position: " + position + " , otherRobots: " + otherRobots);
 
         /* --- (thread start) ------------------------------------ starting to get data from air pollution sensor --- */
         //PollutionMonitoring p = new PollutionMonitoring(this);
         //p.turnOnPollutionProcessing();
 
         /* ------------------------------------------------------------------------------- setting up gRPC server --- */
+        Server serverGRPC;
         try {
-            startServerGRPC();
+            serverGRPC = startServerGRPC();
         } catch (Exception e) {
-            errorln(e.toString());
+            error(Type.B, "... " + e.getMessage());
             return;
         }
-        logln("... gRPC server on");
+        info(Type.B, "... gRPC server on");
 
 
         /* -------------------------------------- presentation to the other robots already in Greenfield via gRPC --- */
-        presentation();
+        n.presentation();
 
         /* --- (thread start) ----------- starting to publish pollution levels into the MQTT topic of my district --- */
         //p.turnOnPollutionPublishing();
@@ -91,22 +76,28 @@ public class Robot {
         m = new Maintenance(this);
         m.turnOnMaintenance();
 
+        HeartbeatThread h = new HeartbeatThread(this);
+        h.start();
+
         /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
+
         Scanner s = new Scanner(System.in);
-        String menu = "Insert:\t\t\"quit\" to remove this robot from the smart city\n" +
-                           "\t\t\t \"fix\" to request the maintenance for this robot";
-        cliln(menu);
+        cliln("Insert:\t\t\"quit\" to remove this robot from the smart city   ");
+        cliln("\t\t\t \"fix\" to request the maintenance for this robot  ");
+
         while (true) {
             String input = s.next();
 
             if (input.equals("quit")) {
-                successln("... quit command");
+                log(Type.B,"... quit command received");
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
                 m.turnOffMaintenance();
 
+                h.stopMeGently();
+
                 /* ------------------------------ notifying the other robots that I'm leaving Greenfield via gRPC --- */
-                leaving(id);
+                n.leaving(id);
 
                 /* --- (thread stop) -------------------------------------- finishing pollution levels publishing --- */
                 //p.turnOffPollutionPublishing();
@@ -116,233 +107,114 @@ public class Robot {
 
                 /* --------------------------------------------- removal of this robot from Administration Server --- */
                 try {
-                    removal(id);
+                    n.removal(id);
                 } catch (RemovalFailureException e) {
-                    errorln(e.toString());
+                    error(Type.N, "... removal of this robot from AdminServer failed - " + e.getMessage());
                     return;
                 }
-                /*catch (Exception e) {
-                    e.printStackTrace();
-                    errorln("BAD ERROR in removal from AdminServer");
-                    errorln(e.toString());
-                    return;
-                }*/
-                successln("... removal of this robot from AdminServer succeeded");
+                info(Type.N, "... removal of this robot from AdminServer succeeded");
 
                 /* -------------------------------------------------------------------- shutting down gRPC server --- */
                 try {
-                    shutdownServerGRPC();
+                    shutdownServerGRPC(serverGRPC);
                 } catch (Exception e) {
-                    errorln(e.toString());
+                    error(Type.B, "... " + e.getMessage());
                     return;
                 }
-                logln("... gRPC server off");
+                info(Type.B, "... gRPC server off");
                 break;
-            } else if (input.equals("fix")) {
-                successln("... fix command");
-
-                synchronized (m.getThread().fixLock){
-                    m.getThread().fixCommand();
-                    m.getThread().fixLock.notify();
-                }
-
+            }
+            else if (input.equals("fix")) {
+                log(Type.B,"... fix command received");
+                m.getThread().fixCommand();
             } else
-                errorln("INVALID INPUT");
+                error(Type.B,"... invalid command received");
         }
     }
 
-    // ------------------------------------------------------------------------------------------- Getters & Setters ---
+    // -------------------------------------------------------------------------------------------- getters, setters ---
 
-    public String getId() {
-        return id;
-    }
-    public Object getOtherRobotsLock() {
-        return otherRobotsLock;
-    }
-    public List<RobotRepresentation> getOtherRobots() {
-        return otherRobots;
+    public String getId() { return id; }
+    public int getListeningPort() { return listeningPort; }
+    public String getAdminServerAddress() { return adminServerAddress; }
+    public Position getPosition() {
+        return position;
     }
     public District getDistrict() {
         return district;
+    }
+
+    public List<RobotRepresentation> getOtherRobotsCopy() {
+        synchronized (otherRobotsLock){
+            return new ArrayList<>(otherRobots);
+        }
+    }
+
+    public Network network() {
+        return n;
     }
     public Maintenance getMaintenance() {
         return m;
     }
 
+    public void setPosition(Position position) {
+        this.position = position;
+    }
+    public void setDistrict(District district) {
+        this.district = district;
+    }
+    public void setOtherRobots(List<RobotRepresentation> otherRobots) {
+        this.otherRobots = otherRobots;
+    }
+
+    // ---------------------------------------------------------------------------------------- otherRobots updating ---
+
+    // add robot x to otherRobots, if it does not contain already a robot with the same id as x
+    public void addToOtherRobots(RobotRepresentation x){
+        synchronized (otherRobotsLock){
+            for (RobotRepresentation y : otherRobots){
+                if (Objects.equals(y.getId(), x.getId()))
+                    return;
+            }
+            otherRobots.add(x);
+        }
+    }
+
+    // remove from otherRobots a robot by its id, if present
+    public void removeFromOtherRobotsById(String id){
+        synchronized (otherRobotsLock){
+            for (RobotRepresentation y : otherRobots)
+                if (Objects.equals(y.getId(), id)) {
+                    otherRobots.remove(y);
+                    return;
+                }
+        }
+    }
+
     // --------------------------------------------------------------------------------------- gRPC Server utilities ---
 
-    private void startServerGRPC() {
+    private Server startServerGRPC() {
         try {
-            serverGRPC = ServerBuilder.forPort(listeningPort)
+            Server s = ServerBuilder.forPort(listeningPort)
                     .addService(new PresentationServiceImpl(this))
                     .addService(new LeavingServiceImpl(this))
                     .addService(new MaintenanceServiceImpl(this))
+                    .addService(new HeartbeatServiceImpl())
                     .build();
-            serverGRPC.start();
+            s.start();
+            return s;
         } catch (Exception e) {
             throw new RuntimeException("Unable to start gRPC server properly");
         }
     }
 
-    private void shutdownServerGRPC() {
+    private void shutdownServerGRPC(Server s) {
         try {
             // waiting 3 seconds for all the calls to be propagated
-            serverGRPC.awaitTermination(3, TimeUnit.SECONDS);
-            serverGRPC.shutdown();
+            s.awaitTermination(3, TimeUnit.SECONDS);
+            s.shutdown();
         } catch (Exception e) {
             throw new RuntimeException("Unable to shutdown gRPC server properly");
         }
-    }
-
-    // ------------------------------------------------------------------- Administration Server REST services calls ---
-
-    // registration of this robot to Administration Server
-    private void registration() throws RegistrationFailureException {
-
-        Client client = Client.create();
-        ClientResponse response = postRegistrationRequest(client, adminServerAddress + "/robots/register",
-                new RobotRepresentation(id, "localhost", listeningPort));
-
-        if (response == null)
-            throw new RegistrationFailureException("Server is unavailable");
-
-        //logln("Registration response: " + clientResponse.toString());
-
-        if (response.getStatus() == 200) {
-
-            RegistrationResponse r = response.getEntity(RegistrationResponse.class);
-            position = r.getPosition();
-            district = position.getDistrict();
-            otherRobots = r.getOtherRobots();
-            if (otherRobots == null)
-                otherRobots = new ArrayList<>();
-        } else
-            throw new RegistrationFailureException("Registration failure");
-    }
-
-    // removal of a robot by its id from Administration Server
-    private void removal(String id) throws RemovalFailureException {
-
-        Client client = Client.create();
-        ClientResponse response = deleteRemovalRequest(client, adminServerAddress + "/robots/remove", id);
-
-        if (response == null)
-            throw new RemovalFailureException("Server is unavailable");
-
-        //logln("Removal response: " + clientResponse.toString());
-
-        if (response.getStatus() != 200)
-            throw new RemovalFailureException("Removal failure");
-    }
-
-    // --------------------------------------------------------------------------- robot network management via gRPC ---
-
-    // presentation to the other robots already in Greenfield
-    private void presentation() {
-
-        List<RobotRepresentation> otherRobotsCopy;
-        synchronized (otherRobotsLock) {
-            otherRobotsCopy = new ArrayList<>(otherRobots);
-        }
-
-        for (RobotRepresentation x : otherRobotsCopy) {
-
-            final ManagedChannel channel = ManagedChannelBuilder
-                    .forTarget("localhost:" + x.getPort()).usePlaintext().build();
-
-            PresentationServiceStub stub = PresentationServiceGrpc.newStub(channel);
-            PresentationRequest request = PresentationRequest.newBuilder()
-                    .setId(id)
-                    .setPort(listeningPort)
-                    .setPosition(PresentationRequest.Position.newBuilder()
-                            .setX(position.getX())
-                            .setY(position.getY())
-                            .build())
-                    .build();
-
-            stub.presentation(request, new StreamObserver<PresentationResponse>() {
-
-                public void onNext(PresentationResponse response) {
-                    successln("... presentation to " + x + " succeeded");
-                }
-
-                public void onError(Throwable throwable) {
-                    errorln(x + " is dead [presentation]");
-                    removeDeadRobot(x);
-                }
-
-                public void onCompleted() {
-                    channel.shutdownNow();
-                }
-            });
-        }
-    }
-
-    // notifying other robots that the robot with a certain id is leaving Greenfield
-    private void leaving(String leavingRobotId) {
-
-        List<RobotRepresentation> others;
-        synchronized (otherRobotsLock) {
-            others = new ArrayList<>(otherRobots);
-        }
-
-        for (RobotRepresentation x : others) {
-
-            final ManagedChannel channel = ManagedChannelBuilder
-                    .forTarget("localhost:" + x.getPort()).usePlaintext().build();
-
-            LeavingServiceStub stub = LeavingServiceGrpc.newStub(channel);
-            LeavingRequest request;
-            if (Objects.equals(leavingRobotId, id))
-                request = LeavingRequest.newBuilder().setId(leavingRobotId).build();
-            else
-                request = LeavingRequest.newBuilder().setId(leavingRobotId).setSender(id).build();
-
-            stub.leaving(request, new StreamObserver<LeavingResponse>() {
-
-                public void onNext(LeavingResponse response) {
-                    successln("Notified " + x + " that " +
-                            ((Objects.equals(id, leavingRobotId)) ? "I'm " : "R_" + leavingRobotId + " is ") + "leaving");
-                }
-
-                public void onError(Throwable throwable) {
-                    errorln(x + " is dead [leaving]");
-                    removeDeadRobot(x); }
-
-                public void onCompleted() {
-                    channel.shutdownNow();
-                }
-            });
-        }
-
-    }
-
-    public void removeDeadRobot(RobotRepresentation x) {
-
-        // removing x from otherRobots
-        synchronized (otherRobotsLock) {
-            for (RobotRepresentation y : otherRobots) {
-                if (Objects.equals(y.getId(), x.getId())) {
-                    otherRobots.remove(x);
-                    break;
-                }
-            }
-        }
-
-        // removing x from AdminServer
-        try {
-            errorln("... removing " + x + " from AdminServer");
-            removal(x.getId());
-        } catch (RemovalFailureException e) {
-            warnln("... someone already removed " + x + " from AdminServer");
-            errorln(e.toString());
-        }
-
-        // update maintenance pending requests
-        m.getThread().updatePendingMaintenanceRequests(x);
-
-        // notifying other robots that x is dead
-        errorln("... notifying otherRobots that " + x + " is dead");
-        leaving(x.getId());
     }
 }

@@ -6,8 +6,8 @@ import com.google.gson.Gson;
 import java.util.List;
 
 import static java.time.Instant.now;
-import static common.Printer.errorln;
-import static common.Printer.logln;
+import static common.printer.Printer.errorln;
+import static common.printer.Printer.logln;
 
 public class SensorDataPublishingThread extends Thread {
 
