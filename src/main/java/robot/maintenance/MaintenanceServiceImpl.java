@@ -7,7 +7,6 @@ import io.grpc.stub.StreamObserver;
 import robot.Robot;
 
 import static common.printer.Printer.log;
-import static common.printer.Printer.logln;
 
 public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
 
@@ -22,19 +21,17 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
 
         log(Type.M, "... R_" + request.getId() + " needs maintenance");
 
-        MaintenanceThread m = r.getMaintenance().getThread();
-
-        while (m.hasToWait(request.getTimestamp())){
-            //System.out.println("... blocking maintenance response to R_" + request.getId());
-            synchronized (m.sendResponseLock){
+        while (r.maintenance().hasToWait(request.getTimestamp())){
+            //log(Type.M_LOW, "... blocking maintenance response to R_" + request.getId());
+            synchronized (r.maintenance().getSendResponseLock()){
                 try {
-                    m.sendResponseLock.wait();
+                    r.maintenance().getSendResponseLock().wait();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
         }
-        //System.out.println("... sending maintenance response to R_" + request.getId());
+        //log(Type.M_LOW, "... sending maintenance response to R_" + request.getId());
 
         MaintenanceResponse response = MaintenanceResponse.newBuilder().build();
         responseObserver.onNext(response);

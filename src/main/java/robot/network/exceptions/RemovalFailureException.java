@@ -1,4 +1,4 @@
-package common.exceptions;
+package robot.network.exceptions;
 
 public class RemovalFailureException extends Exception {
     public RemovalFailureException(String errorMessage) {

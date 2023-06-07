@@ -2,7 +2,7 @@ package robot;
 
 import common.District;
 import common.Position;
-import admin_server.REST_response_formats.RobotRepresentation;
+import admin_server.rest_response_formats.RobotRepresentation;
 
 import common.printer.Type;
 import io.grpc.Server;
@@ -10,8 +10,7 @@ import io.grpc.ServerBuilder;
 import robot.network.*;
 import robot.maintenance.Maintenance;
 import robot.maintenance.MaintenanceServiceImpl;
-import common.exceptions.RegistrationFailureException;
-import common.exceptions.RemovalFailureException;
+import robot.pollution.Pollution;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -45,15 +44,16 @@ public class Robot {
         /* -------------------------------------------------- registration of this robot to Administration Server --- */
         try {
             n.registration();
-        } catch (RegistrationFailureException e) {
+        } catch (Exception e) {
             error(Type.N, "... registration to AdminServer failed - " + e.getMessage());
             return;
         }
-        info(Type.N, "... registration to AdminServer succeeded - position: " + position + " , otherRobots: " + otherRobots);
+        log(Type.N, "... registration to AdminServer succeeded - " +
+                "position: " + position + " , otherRobots: " + otherRobots);
 
         /* --- (thread start) ------------------------------------ starting to get data from air pollution sensor --- */
-        //PollutionMonitoring p = new PollutionMonitoring(this);
-        //p.turnOnPollutionProcessing();
+        Pollution p = new Pollution(this);
+        p.turnOnPollutionProcessing();
 
         /* ------------------------------------------------------------------------------- setting up gRPC server --- */
         Server serverGRPC;
@@ -63,27 +63,26 @@ public class Robot {
             error(Type.B, "... " + e.getMessage());
             return;
         }
-        info(Type.B, "... gRPC server on");
+        log(Type.B, "... gRPC server on");
 
 
         /* -------------------------------------- presentation to the other robots already in Greenfield via gRPC --- */
         n.presentation();
 
         /* --- (thread start) ----------- starting to publish pollution levels into the MQTT topic of my district --- */
-        //p.turnOnPollutionPublishing();
+        p.turnOnPollutionPublishing();
 
         /* --- (thread start) ---------- starting to organize with the other robots the access to the maintenance --- */
         m = new Maintenance(this);
         m.turnOnMaintenance();
-
         HeartbeatThread h = new HeartbeatThread(this);
         h.start();
 
         /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
 
         Scanner s = new Scanner(System.in);
-        cliln("Insert:\t\t\"quit\" to remove this robot from the smart city   ");
-        cliln("\t\t\t \"fix\" to request the maintenance for this robot  ");
+        cli("Insert:\t\t\"quit\" to remove this robot from the smart city   ");
+        cli("\t\t\t \"fix\" to request the maintenance for this robot  ");
 
         while (true) {
             String input = s.next();
@@ -93,26 +92,24 @@ public class Robot {
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
                 m.turnOffMaintenance();
-
                 h.stopMeGently();
 
                 /* ------------------------------ notifying the other robots that I'm leaving Greenfield via gRPC --- */
                 n.leaving(id);
 
                 /* --- (thread stop) -------------------------------------- finishing pollution levels publishing --- */
-                //p.turnOffPollutionPublishing();
+                p.turnOffPollutionPublishing();
 
                 /* --- (thread stop) ---------------------------- finishing to get data from air pollution sensor --- */
-                //p.turnOffPollutionProcessing();
+                p.turnOffPollutionProcessing();
 
                 /* --------------------------------------------- removal of this robot from Administration Server --- */
                 try {
                     n.removal(id);
-                } catch (RemovalFailureException e) {
+                    log(Type.N, "... removal of this robot from AdminServer succeeded");
+                } catch (Exception e) {
                     error(Type.N, "... removal of this robot from AdminServer failed - " + e.getMessage());
-                    return;
                 }
-                info(Type.N, "... removal of this robot from AdminServer succeeded");
 
                 /* -------------------------------------------------------------------- shutting down gRPC server --- */
                 try {
@@ -121,12 +118,12 @@ public class Robot {
                     error(Type.B, "... " + e.getMessage());
                     return;
                 }
-                info(Type.B, "... gRPC server off");
+                log(Type.B, "... gRPC server off");
                 break;
             }
             else if (input.equals("fix")) {
                 log(Type.B,"... fix command received");
-                m.getThread().fixCommand();
+                m.fixCommand();
             } else
                 error(Type.B,"... invalid command received");
         }
@@ -153,7 +150,7 @@ public class Robot {
     public Network network() {
         return n;
     }
-    public Maintenance getMaintenance() {
+    public Maintenance maintenance() {
         return m;
     }
 

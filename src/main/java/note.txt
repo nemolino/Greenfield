@@ -6,33 +6,21 @@ Posso evitare heartbeat?
     Se dico che me ne sto andando a un robot che non c'è?
     (lo tolgo da otherRobots)   + avviso il server  (+ avviso gli altri)
 
-------------------------------------------------------------------------------------------------------------------------
 
-M0      M1      M2      M3      M4      M5      M6      M7      M8      M9      M10     M11     M12     M13     ...
-t0      t1      t2      t3      t4      t5      t6      t7      t8      t9      t10     t11     t12     t13     ...
---------------------------------------------------------------------
-                                --------------------------------------------------------------------
-                                                                --------------------------------------------    ...
-
-[21.031730495517678 1683820044736, 21.28514810256742 1683820045016, 21.506532598910745 1683820045348, 21.43520278743126 1683820045721, 21.42634485541075 1683820046059, 21.714670122791027 1683820046458, 21.83899914401831 1683820046674, 21.801263716393194 1683820046978]
-                                                                                                                                      [21.42634485541075 1683820046059, 21.714670122791027 1683820046458, 21.83899914401831 1683820046674, 21.801263716393194 1683820046978, 22.094005296383642 1683820047235, 22.17627384995565 1683820047530, 22.35375230648161 1683820047753, 22.53311422544921 1683820048006]
-                                                                                                                                                                                                                                                                            [22.094005296383642 1683820047235, 22.17627384995565 1683820047530, 22.35375230648161 1683820047753, 22.53311422544921 1683820048006, 22.799681998085376 1683820048287, 22.83237686231343 1683820048624, 22.77162778729136 1683820048855, 22.9440295011358 1683820049089]
-                                                                                                                                                                                                                                                                                                                                                                                                                 [22.799681998085376 1683820048287, 22.83237686231343 1683820048624, 22.77162778729136 1683820048855, 22.9440295011358 1683820049089, 23.165937780765695 1683820049361, 23.27948731291543 1683820049624, 23.55424370431774 1683820049967, 23.626731274815683 1683820050362]
 PM10Simulator           acts like a PRODUCER, puts Measurement(s) in BufferImpl
 SensorDataProcessing    acts like a CONSUMER, gets windows of 8 Measurement(s) from BufferImpl
 SensorDataProcessing    acts like a PRODUCER, puts avg of windows in BufferAverages
 SensorDataPublishing    acts like a CONSUMER, gets avg windows from BufferAverages and publish them via MQTT
 
-TODO - risolvi gli errori di questo tipo
 
-Jun 04, 2023 2:53:52 PM io.grpc.internal.ManagedChannelOrphanWrapper$ManagedChannelReference cleanQueue
-SEVERE: *~*~*~ Channel ManagedChannelImpl{logId=31, target=localhost:2223} was not shutdown properly!!! ~*~*~*
-    Make sure to call shutdown()/shutdownNow() and wait until awaitTermination() returns true.
-java.lang.RuntimeException: ManagedChannel allocation site
-	at io.grpc.internal.ManagedChannelOrphanWrapper$ManagedChannelReference.<init>(ManagedChannelOrphanWrapper.java:94)
-	at io.grpc.internal.ManagedChannelOrphanWrapper.<init>(ManagedChannelOrphanWrapper.java:52)
-	at io.grpc.internal.ManagedChannelOrphanWrapper.<init>(ManagedChannelOrphanWrapper.java:43)
-	at io.grpc.internal.AbstractManagedChannelImplBuilder.build(AbstractManagedChannelImplBuilder.java:524)
-	at robot.maintenance.MaintenanceThread.sendMaintenanceRequests(MaintenanceThread.java:126)
-	at robot.maintenance.MaintenanceThread.accessMaintenance(MaintenanceThread.java:90)
-	at robot.maintenance.MaintenanceThread.run(MaintenanceThread.java:68)
+/* considerazioni in maintenance thread
+ * Se si aggiunge un nuovo robot e io ho già mandato le richieste senza considerare lui
+ * perchè non lo avevo in otherRobots non è un problema :
+ * se non lo avevo in otherRobots non può aver ancora mandato richieste con un timestamp < del mio.
+ *
+ * Se un robot termina in modo controllato (con "quit") non succede nulla
+ * perchè prima di terminare manda tutte le risposte che ha in sospeso.
+ */
+
+ - sopprimi grpc
+ - formatta codice

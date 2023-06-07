@@ -1,4 +1,4 @@
-package admin_server.REST_response_formats;
+package admin_server.rest_response_formats;
 
 import common.Position;
 

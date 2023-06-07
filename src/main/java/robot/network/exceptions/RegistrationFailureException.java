@@ -1,4 +1,4 @@
-package common.exceptions;
+package robot.network.exceptions;
 
 public class RegistrationFailureException extends Exception {
     public RegistrationFailureException(String errorMessage) {

@@ -1,8 +1,9 @@
-package admin_server.REST_services;
+package admin_server.rest_services;
 
-import admin_server.REST_response_formats.ListRobotsResponse;
-import admin_server.REST_response_formats.RobotRepresentation;
+import admin_server.rest_response_formats.ListRobotsResponse;
+import admin_server.rest_response_formats.RobotRepresentation;
 import admin_server.SmartCity;
+import common.printer.Type;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -22,10 +23,10 @@ public class AdminClientServices {
     @Produces({"application/json", "application/xml"})
     public Response robotsList() {
 
-        logln("Query1 : list_all_robots");
+        log(Type.Q, "... query1 : list_all_robots");
 
-        List<RobotRepresentation> robots = SmartCity.getInstance().getRobotsList();
-        successln("Query1 succeeded\n");
+        List<RobotRepresentation> robots = SmartCity.getInstance().getRegisteredRobotsList();
+        log(Type.Q, "... query1 succeeded");
         return Response.ok(new ListRobotsResponse(robots)).build();
     }
 
@@ -34,15 +35,15 @@ public class AdminClientServices {
     @Produces(MediaType.TEXT_PLAIN)
     public Response avgLastNOfId(@PathParam("id") String id, @PathParam("n") int n) {
 
-        logln("Query2 : avg_last_n_of_id/{id = " + id + "}/{n = " + n + "})");
+        log(Type.Q, "... query2 : avg_last_n_of_id/{id = " + id + "}/{n = " + n + "})");
 
         try {
             double result = SmartCity.getInstance().getAvgLastNOfId(n, id);
-            successln("Query2 succeeded\n");
+            log(Type.Q, "... query2 succeeded");
             return Response.ok(String.valueOf(result)).build();
 
         } catch (Exception e) {
-            warnln(e.getMessage());
+            warn(Type.Q, "... query2 failed - " + e.getMessage());
             return Response.status(404).build();
         }
     }
@@ -52,15 +53,15 @@ public class AdminClientServices {
     @Produces(MediaType.TEXT_PLAIN)
     public Response avgInTimeRange(@PathParam("t1") long t1, @PathParam("t2") long t2) {
 
-        logln("Query3 : avg_between_t1_and_t2/{t1 = " + t1 + "}/{t2 = " + t2 + "}");
+        log(Type.Q, "... query3 : avg_between_t1_and_t2/{t1 = " + t1 + "}/{t2 = " + t2 + "}");
 
         try {
             double result = SmartCity.getInstance().getAvgInTimeRange(t1, t2);
-            successln("Query3 succeeded\n");
+            log(Type.Q, "... query3 succeeded");
             return Response.ok(String.valueOf(result)).build();
 
         } catch (Exception e) {
-            warnln(e.getMessage());
+            warn(Type.Q, "... query3 failed - " + e.getMessage());
             return Response.status(404).build();
         }
     }

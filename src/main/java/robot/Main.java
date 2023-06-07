@@ -1,16 +1,25 @@
 package robot;
 
+import static common.Util.*;
 import static common.printer.Printer.*;
-import static common.Configuration.ADMIN_SERVER_ADDRESS;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        String id = args[0]; //generateRobotID();
-        int listeningPort = Integer.parseInt(args[1]);
+        String id;
+        int listeningPort;
 
-        cliln("robotID: " + id + " , port: " + listeningPort);
+        if (args.length == 2){
+            id = args[0];
+            listeningPort = Integer.parseInt(args[1]);
+        }
+        else{
+            id = getSomeID();
+            listeningPort = getSomePort();
+        }
+
+        cli("robotID: " + id + " , port: " + listeningPort);
 
         Robot r = new Robot(id, listeningPort, ADMIN_SERVER_ADDRESS);
         r.robotMain();

@@ -7,7 +7,7 @@ import common.printer.Type;
 import io.grpc.stub.StreamObserver;
 import robot.Robot;
 
-import static common.printer.Printer.info;
+import static common.printer.Printer.log;
 
 public class LeavingServiceImpl extends LeavingServiceImplBase {
 
@@ -20,14 +20,17 @@ public class LeavingServiceImpl extends LeavingServiceImplBase {
     @Override
     public void leaving(LeavingRequest request, StreamObserver<LeavingResponse> responseObserver) {
 
-        info(Type.N, "... R_" + request.getId() + " is leaving Greenfield " +
-                "( warned by R_" + (request.getSender().equals("") ? request.getId() : request.getSender()) + " )");
+        if (request.getSender().equals(""))
+            log(Type.N, "... R_" + request.getId() + " is leaving Greenfield ( warned by R_" + request.getId() + " )");
+        else
+            log(Type.N, "... R_" + request.getId() + " has left Greenfield ( warned by R_" + request.getSender() + " )");
+
 
         // updating otherRobots
         r.removeFromOtherRobotsById(request.getId());
 
         // update maintenance pending requests
-        r.getMaintenance().getThread().updatePendingMaintenanceRequestsById(request.getId());
+        r.maintenance().updatePendingMaintenanceRequestsById(request.getId());
 
         LeavingResponse response = LeavingResponse.newBuilder().build();
         responseObserver.onNext(response);

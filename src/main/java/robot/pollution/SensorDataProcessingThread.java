@@ -1,11 +1,12 @@
 package robot.pollution;
 
+import common.printer.Type;
 import simulator.Measurement;
 import simulator.PM10Simulator;
 
 import java.util.List;
 
-import static common.printer.Printer.warnln;
+import static common.printer.Printer.log;
 
 public class SensorDataProcessingThread extends Thread {
 
@@ -15,7 +16,6 @@ public class SensorDataProcessingThread extends Thread {
     private final BufferAverages b;
 
     public SensorDataProcessingThread(BufferAverages b){
-
         this.s = new PM10Simulator(new BufferWindow());
         this.b = b;
     }
@@ -27,7 +27,7 @@ public class SensorDataProcessingThread extends Thread {
         while (!stopCondition) {
 
             List<Measurement> window = s.getBuffer().readAllAndClean();
-            //warnln(window.toString());
+            log(Type.P_LOW, "... measurements window: " + window.toString());
 
             double avg = 0;
             for (Measurement m : window)

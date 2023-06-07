@@ -1,37 +1,60 @@
 package robot.maintenance;
 
+import admin_server.rest_response_formats.RobotRepresentation;
 import common.printer.Type;
 import robot.Robot;
 
+import java.util.List;
+
 import static common.printer.Printer.log;
-import static common.printer.Printer.warn;
 
 public class Maintenance {
 
     private final Robot r;
-    private MaintenanceThread m;
+    private MaintenanceThread t;
 
     public Maintenance(Robot r){
         this.r = r;
     }
 
     public void turnOnMaintenance() {
-        m = new MaintenanceThread(r);
-        m.start();
+        t = new MaintenanceThread(r);
+        t.start();
     }
 
     public void turnOffMaintenance() {
-        m.stopMeGently();
+        t.stopMeGently();
         try {
-            m.join();
+            t.join();
             log(Type.M, "... maintenance operations are finished");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
-    // getter
-    public MaintenanceThread getThread() {
-        return m;
+    // wrapping some MaintenanceThread methods
+
+    public void fixCommand() {
+        t.fixCommand();
+    }
+
+    public void updatePendingMaintenanceRequests(RobotRepresentation x) {
+        t.updatePendingMaintenanceRequests(x);
+    }
+
+    public void updatePendingMaintenanceRequestsById(String id) {
+        t.updatePendingMaintenanceRequestsById(id);
+    }
+
+    public boolean hasToWait(String otherRequestTimestamp){
+        return t.hasToWait(otherRequestTimestamp);
+    }
+
+    public List<RobotRepresentation> getPendingRequestsCopy(){
+        return t.getPendingRequestsCopy();
+    }
+
+    public Object getSendResponseLock() {
+        return t.getSendResponseLock();
     }
 }

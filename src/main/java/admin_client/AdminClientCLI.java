@@ -1,112 +1,131 @@
 package admin_client;
 
-import admin_server.REST_response_formats.ListRobotsResponse;
-import admin_server.REST_response_formats.RobotRepresentation;
+import admin_server.rest_response_formats.ListRobotsResponse;
+import admin_server.rest_response_formats.RobotRepresentation;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import common.printer.Type;
 
 import java.util.List;
 import java.util.Scanner;
 
 import static common.printer.Printer.*;
-import static common.Configuration.ADMIN_SERVER_ADDRESS;
+import static common.Util.ADMIN_SERVER_ADDRESS;
 
 public class AdminClientCLI {
 
     public static void main(String[] args) {
 
         Scanner s = new Scanner(System.in);
-        cliln("HELLO AdminClient\n");
         String menu =
                 "Insert:\t\t\"a\" to get the list of the cleaning robots currently located in Greenfield\n" +
-                     "\t\t\t\"b\" to get the average of the last n air pollution levels sent to the server by a given (?CONNECTED?) robot\n" +
-                     "\t\t\t\"c\" to get the average of the air pollution levels sent by all the (?CONNECTED?) robots to the server and occurred from timestamps t1 and t2\n" +
-                     "\t\t\t\"q\" to quit\n";
+                        "\t\t\t\"b\" to get the average of the last n air pollution levels sent to the server by a given robot\n" +
+                        "\t\t\t\"c\" to get the average of the air pollution levels sent by all the robots to the server and occurred from timestamps t1 and t2\n" +
+                        "\t\t\t\"q\" to quit\n";
         boolean quit = false;
 
-        Client client = Client.create();;
+        Client client = Client.create();
         ClientResponse clientResponse;
 
-        while (!quit){
-            cliln(menu);
-            System.out.print("Input: ");
+        while (!quit) {
+            cli(menu);
+            logInline(Type.B, "Input: ");
             String input = s.next();
-            System.out.println();
+            log(Type.B, "");
 
             switch (input) {
 
                 case "a":
                     clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/list_all_robots");
-                    //logln("query1 response: " + clientResponse.toString());
-                    if (clientResponse.getStatus() == 200) {
+                    if (clientResponse == null)
+                        error(Type.Q, "query1 FAILED, server is unavailable");
+                    else if (clientResponse.getStatus() == 200) {
                         ListRobotsResponse response = clientResponse.getEntity(ListRobotsResponse.class);
                         List<RobotRepresentation> r = response.getRobots();
-                        if (r != null){
-                            log("Robots currently in Greenfield :\t");
+                        if (r != null) {
+                            logInline(Type.Q, "Robots currently in Greenfield :\t");
                             for (RobotRepresentation x : r)
-                                log("Robot with ID " + x.getId() + " at address " + x.getAddress() + " and port " + x.getPort() + "\n\t\t\t\t\t\t\t\t\t");
-                        }
-                        else logln("No robots currently in Greenfield");
-                    }
-                    else
-                        errorln("query1 FAILURE");
+                                logInline(Type.Q, "Robot with ID " + x.getId() + " at address " + x.getAddress() + " and port " + x.getPort() + "\n\t\t\t\t\t\t\t\t\t");
+                        } else log(Type.Q, "No robots currently in Greenfield");
+                    } else error(Type.Q, "query1 FAILED, arguments are not correct");
                     break;
 
                 case "b":
-                    System.out.print("Insert robot ID: ");
+                    logInline(Type.B, "Insert robot ID: ");
                     String id = s.next();
-                    System.out.print("Insert n > 0: ");
-                    String n = String.valueOf(s.nextInt());
-                    System.out.println();
-                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/avg_last_n_of_id/" + id + "/" + n);
-                    //logln("query2 response: " + clientResponse.toString());
-                    if (clientResponse.getStatus() == 200) {
-                        String response = clientResponse.getEntity(String.class);
-                        logln("Response: " + response);
+                    String n;
+                    while (true) {
+                        logInline(Type.B, "Insert n > 0: ");
+                        n = s.next();
+                        try {
+                            Integer.parseInt(n);
+                        } catch (Exception e) {
+                            continue;
+                        }
+                        break;
                     }
-                    else
-                        errorln("query2 FAILURE");
+                    log(Type.B, "");
+                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/avg_last_n_of_id/" + id + "/" + n);
+                    if (clientResponse == null)
+                        error(Type.Q, "query2 FAILED, server is unavailable");
+                    else if (clientResponse.getStatus() == 200) {
+                        String response = clientResponse.getEntity(String.class);
+                        log(Type.Q, "Response: " + response);
+                    } else error(Type.Q, "query2 FAILED, arguments are not correct");
                     break;
 
                 case "c":
-                    System.out.print("Insert t1: ");
-                    String t1 = String.valueOf(s.nextLong());
-                    System.out.print("Insert t2: ");
-                    String t2 = String.valueOf(s.nextLong());
-                    System.out.println();
-                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/avg_between_t1_and_t2/" + t1 + "/" + t2);
-                    //logln("query3 response: " + clientResponse.toString());
-                    if (clientResponse.getStatus() == 200) {
-                        String response = clientResponse.getEntity(String.class);
-                        logln("Response: " + response);
+                    String t1, t2;
+                    while (true) {
+                        logInline(Type.B, "Insert t1: ");
+                        t1 = s.next();
+                        try {
+                            Long.parseLong(t1);
+                        } catch (Exception e) {
+                            continue;
+                        }
+                        break;
                     }
-                    else
-                        errorln("query3 FAILURE");
+                    while (true) {
+                        logInline(Type.B, "Insert t2: ");
+                        t2 = s.next();
+                        try {
+                            Long.parseLong(t2);
+                        } catch (Exception e) {
+                            continue;
+                        }
+                        break;
+                    }
+                    log(Type.B, "");
+                    clientResponse = getRequest(client, ADMIN_SERVER_ADDRESS + "/query/avg_between_t1_and_t2/" + t1 + "/" + t2);
+                    if (clientResponse == null)
+                        error(Type.Q, "query3 FAILED, server is unavailable");
+                    else if (clientResponse.getStatus() == 200) {
+                        String response = clientResponse.getEntity(String.class);
+                        log(Type.Q, "Response: " + response);
+                    } else error(Type.Q, "query3 FAILED, arguments are not correct");
                     break;
 
                 case "q":
-                    logln("GOODBYE AdminClient");
                     quit = true;
+                    log(Type.Q, "Goodbye");
                     break;
 
                 default:
-                    errorln("INVALID INPUT");
+                    error(Type.Q, "INVALID INPUT");
                     break;
             }
-            System.out.println();
+            log(Type.B, "");
         }
-
-
     }
 
-    public static ClientResponse getRequest(Client client, String url) {
+    private static ClientResponse getRequest(Client client, String url) {
         WebResource webResource = client.resource(url);
         try {
             return webResource.type("application/json").get(ClientResponse.class);
         } catch (ClientHandlerException e) {
-            errorln("Server non disponibile");
             return null;
         }
     }

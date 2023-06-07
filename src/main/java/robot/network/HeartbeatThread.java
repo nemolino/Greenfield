@@ -1,6 +1,6 @@
 package robot.network;
 
-import admin_server.REST_response_formats.RobotRepresentation;
+import admin_server.rest_response_formats.RobotRepresentation;
 import com.example.grpc.HeartbeatServiceGrpc;
 import com.example.grpc.HeartbeatServiceOuterClass.HeartbeatRequest;
 import com.example.grpc.HeartbeatServiceOuterClass.HeartbeatResponse;
@@ -19,7 +19,7 @@ public class HeartbeatThread extends Thread {
     protected volatile boolean stopCondition = false;
 
     private final Robot r;
-    private final Object lock = new Object();
+    private final Object stopLock = new Object();
 
     public HeartbeatThread(Robot r) {
         this.r = r;
@@ -31,8 +31,8 @@ public class HeartbeatThread extends Thread {
         while (!stopCondition) {
 
             try {
-                synchronized (lock){
-                    lock.wait(15000);
+                synchronized (stopLock){
+                    stopLock.wait(15000);
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -40,7 +40,7 @@ public class HeartbeatThread extends Thread {
 
             if (stopCondition) break;
 
-            List<RobotRepresentation> p = r.getMaintenance().getThread().getPendingRequestsCopy();
+            List<RobotRepresentation> p = r.maintenance().getPendingRequestsCopy();
             log(Type.M_LOW, "... pending maintenance requests: " + p);
 
             if (p == null || p.size() == 0) continue;
@@ -76,8 +76,8 @@ public class HeartbeatThread extends Thread {
 
     public void stopMeGently() {
         stopCondition = true;
-        synchronized (lock){
-            lock.notify();
+        synchronized (stopLock){
+            stopLock.notify();
         }
     }
 }

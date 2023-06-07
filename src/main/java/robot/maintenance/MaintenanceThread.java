@@ -1,6 +1,6 @@
 package robot.maintenance;
 
-import admin_server.REST_response_formats.RobotRepresentation;
+import admin_server.rest_response_formats.RobotRepresentation;
 import com.example.grpc.MaintenanceServiceGrpc;
 import com.example.grpc.MaintenanceServiceOuterClass.MaintenanceRequest;
 import com.example.grpc.MaintenanceServiceOuterClass.MaintenanceResponse;
@@ -15,30 +15,20 @@ import java.util.*;
 
 import static common.printer.Printer.*;
 
-/*
- * Se si aggiunge un nuovo robot e io ho già mandato le richieste senza considerare lui
- * perchè non lo avevo in otherRobots non è un problema :
- * se non lo avevo in otherRobots non può aver ancora mandato richieste con un timestamp < del mio.
- *
- * Se un robot termina in modo controllato (con "quit") non succede nulla
- * perchè prima di terminare manda tutte le risposte che ha in sospeso.
- *
- */
-
 public class MaintenanceThread extends Thread {
 
     protected volatile boolean stopCondition = false;
     protected volatile boolean fixCommand = false;
 
     private final Robot r;
-    private List<RobotRepresentation> otherRobotsCopy;
+    private List<RobotRepresentation> otherRobots;
 
     private Long requestTimestamp = null;
     private Set<RobotRepresentation> pendingRequests = null;
     private boolean usingMaintenance;
 
     private final Object fixLock = new Object();
-    public final Object sendResponseLock = new Object();
+    private final Object sendResponseLock = new Object();
     private final Object accessMaintenanceLock = new Object();
     private final Object structuresLock = new Object();
 
@@ -64,7 +54,7 @@ public class MaintenanceThread extends Thread {
                 }
             }
             else if (Math.random() < 0.1 || fixCommand) {
-                log(Type.M, "... " + LocalTime.now() + " - ⚠\uFE0F I need maintenance!");
+                log(Type.M, "... " + LocalTime.now() + " - ⚠️  NEED maintenance");
                 accessMaintenance();
                 fixCommand = false;
             }
@@ -85,11 +75,11 @@ public class MaintenanceThread extends Thread {
         }
     }
 
-    public void accessMaintenance() {
+    private void accessMaintenance() {
 
         requestTimestamp = System.currentTimeMillis();
-        otherRobotsCopy = r.getOtherRobotsCopy();
-        pendingRequests = new HashSet<>(otherRobotsCopy);
+        otherRobots = r.getOtherRobotsCopy();
+        pendingRequests = new HashSet<>(otherRobots);
 
         sendMaintenanceRequests();
 
@@ -118,7 +108,7 @@ public class MaintenanceThread extends Thread {
 
         log(Type.M_LOW, "... pending = " + pendingRequests);
 
-        for (RobotRepresentation x : otherRobotsCopy) {
+        for (RobotRepresentation x : otherRobots) {
 
             final ManagedChannel channel = ManagedChannelBuilder
                     .forTarget("localhost:" + x.getPort()).usePlaintext().build();
@@ -136,6 +126,7 @@ public class MaintenanceThread extends Thread {
                 }
 
                 public void onError(Throwable throwable) {
+                    // not an error, but I want it red to make it visible
                     error(Type.N, "... " + x + " is dead [sendMaintenanceRequests]");
                     r.network().removeDeadRobot(x);
                     channel.shutdownNow();
@@ -173,7 +164,7 @@ public class MaintenanceThread extends Thread {
                 for (RobotRepresentation x : pendingRequests)
                     if (Objects.equals(x.getId(), id)) {
                         removePendingRequest(x);
-                        break;
+                        return;
                     }
         }
     }
@@ -201,4 +192,7 @@ public class MaintenanceThread extends Thread {
         }
     }
 
+    public Object getSendResponseLock() {
+        return sendResponseLock;
+    }
 }
