@@ -1,7 +1,8 @@
 package robot.maintenance;
 
 import com.example.grpc.MaintenanceServiceGrpc.MaintenanceServiceImplBase;
-import com.example.grpc.MaintenanceServiceOuterClass.*;
+import com.example.grpc.MaintenanceServiceOuterClass.MaintenanceRequest;
+import com.example.grpc.MaintenanceServiceOuterClass.MaintenanceResponse;
 import common.printer.Type;
 import io.grpc.stub.StreamObserver;
 import robot.Robot;
@@ -21,9 +22,9 @@ public class MaintenanceServiceImpl extends MaintenanceServiceImplBase {
 
         log(Type.M, "... R_" + request.getId() + " needs maintenance");
 
-        while (r.maintenance().hasToWait(request.getTimestamp())){
+        while (r.maintenance().hasToWait(request.getTimestamp())) {
             //log(Type.M_LOW, "... blocking maintenance response to R_" + request.getId());
-            synchronized (r.maintenance().getSendResponseLock()){
+            synchronized (r.maintenance().getSendResponseLock()) {
                 try {
                     r.maintenance().getSendResponseLock().wait();
                 } catch (InterruptedException e) {

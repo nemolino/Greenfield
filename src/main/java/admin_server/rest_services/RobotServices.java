@@ -1,19 +1,20 @@
 package admin_server.rest_services;
 
-import common.District;
-import admin_server.rest_response_formats.RegistrationResponse;
-import common.Position;
-import admin_server.rest_response_formats.RobotRepresentation;
 import admin_server.SmartCity;
+import admin_server.rest_response_formats.RegistrationResponse;
+import admin_server.rest_response_formats.RobotRepresentation;
+import common.District;
+import common.Position;
 import common.printer.Type;
-
-import static common.Position.generateRobotPosition;
-import static common.printer.Printer.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Objects;
+
+import static common.Position.generateRobotPosition;
+import static common.printer.Printer.log;
+import static common.printer.Printer.warn;
 
 @Path("robots")
 public class RobotServices {

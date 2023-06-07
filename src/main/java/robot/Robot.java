@@ -1,19 +1,23 @@
 package robot;
 
+import admin_server.rest_response_formats.RobotRepresentation;
 import common.District;
 import common.Position;
-import admin_server.rest_response_formats.RobotRepresentation;
-
 import common.printer.Type;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import robot.network.*;
 import robot.maintenance.Maintenance;
 import robot.maintenance.MaintenanceServiceImpl;
+import robot.network.*;
 import robot.pollution.Pollution;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static common.printer.Printer.*;
 
@@ -88,7 +92,7 @@ public class Robot {
             String input = s.next();
 
             if (input.equals("quit")) {
-                log(Type.B,"... quit command received");
+                log(Type.B, "... quit command received");
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
                 m.turnOffMaintenance();
@@ -120,29 +124,38 @@ public class Robot {
                 }
                 log(Type.B, "... gRPC server off");
                 break;
-            }
-            else if (input.equals("fix")) {
-                log(Type.B,"... fix command received");
+            } else if (input.equals("fix")) {
+                log(Type.B, "... fix command received");
                 m.fixCommand();
             } else
-                error(Type.B,"... invalid command received");
+                error(Type.B, "... invalid command received");
         }
     }
 
     // -------------------------------------------------------------------------------------------- getters, setters ---
 
-    public String getId() { return id; }
-    public int getListeningPort() { return listeningPort; }
-    public String getAdminServerAddress() { return adminServerAddress; }
+    public String getId() {
+        return id;
+    }
+
+    public int getListeningPort() {
+        return listeningPort;
+    }
+
+    public String getAdminServerAddress() {
+        return adminServerAddress;
+    }
+
     public Position getPosition() {
         return position;
     }
+
     public District getDistrict() {
         return district;
     }
 
     public List<RobotRepresentation> getOtherRobotsCopy() {
-        synchronized (otherRobotsLock){
+        synchronized (otherRobotsLock) {
             return new ArrayList<>(otherRobots);
         }
     }
@@ -150,6 +163,7 @@ public class Robot {
     public Network network() {
         return n;
     }
+
     public Maintenance maintenance() {
         return m;
     }
@@ -157,9 +171,11 @@ public class Robot {
     public void setPosition(Position position) {
         this.position = position;
     }
+
     public void setDistrict(District district) {
         this.district = district;
     }
+
     public void setOtherRobots(List<RobotRepresentation> otherRobots) {
         this.otherRobots = otherRobots;
     }
@@ -167,9 +183,9 @@ public class Robot {
     // ---------------------------------------------------------------------------------------- otherRobots updating ---
 
     // add robot x to otherRobots, if it does not contain already a robot with the same id as x
-    public void addToOtherRobots(RobotRepresentation x){
-        synchronized (otherRobotsLock){
-            for (RobotRepresentation y : otherRobots){
+    public void addToOtherRobots(RobotRepresentation x) {
+        synchronized (otherRobotsLock) {
+            for (RobotRepresentation y : otherRobots) {
                 if (Objects.equals(y.getId(), x.getId()))
                     return;
             }
@@ -178,8 +194,8 @@ public class Robot {
     }
 
     // remove from otherRobots a robot by its id, if present
-    public void removeFromOtherRobotsById(String id){
-        synchronized (otherRobotsLock){
+    public void removeFromOtherRobotsById(String id) {
+        synchronized (otherRobotsLock) {
             for (RobotRepresentation y : otherRobots)
                 if (Objects.equals(y.getId(), id)) {
                     otherRobots.remove(y);
@@ -192,6 +208,8 @@ public class Robot {
 
     private Server startServerGRPC() {
         try {
+            Logger grpcExecutorLogger = Logger.getLogger("io.grpc.internal.SerializingExecutor");
+            grpcExecutorLogger.setLevel(Level.OFF);
             Server s = ServerBuilder.forPort(listeningPort)
                     .addService(new PresentationServiceImpl(this))
                     .addService(new LeavingServiceImpl(this))

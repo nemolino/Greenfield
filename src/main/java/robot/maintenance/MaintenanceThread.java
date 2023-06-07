@@ -13,7 +13,8 @@ import robot.Robot;
 import java.time.LocalTime;
 import java.util.*;
 
-import static common.printer.Printer.*;
+import static common.printer.Printer.error;
+import static common.printer.Printer.log;
 
 public class MaintenanceThread extends Thread {
 
@@ -41,19 +42,18 @@ public class MaintenanceThread extends Thread {
         while (!stopCondition) {
 
             try {
-                synchronized (fixLock){
+                synchronized (fixLock) {
                     fixLock.wait(10000);
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
 
-            if (stopCondition){
+            if (stopCondition) {
                 synchronized (sendResponseLock) {
                     sendResponseLock.notifyAll();
                 }
-            }
-            else if (Math.random() < 0.1 || fixCommand) {
+            } else if (Math.random() < 0.1 || fixCommand) {
                 log(Type.M, "... " + LocalTime.now() + " - ⚠️  NEED maintenance");
                 accessMaintenance();
                 fixCommand = false;
@@ -63,14 +63,14 @@ public class MaintenanceThread extends Thread {
 
     public void stopMeGently() {
         stopCondition = true;
-        synchronized (fixLock){
+        synchronized (fixLock) {
             fixLock.notify();
         }
     }
 
     public void fixCommand() {
         fixCommand = true;
-        synchronized (fixLock){
+        synchronized (fixLock) {
             fixLock.notify();
         }
     }
@@ -86,7 +86,7 @@ public class MaintenanceThread extends Thread {
         // waiting for all the responses
         while (pendingRequests.size() > 0) {
             try {
-                synchronized (accessMaintenanceLock){
+                synchronized (accessMaintenanceLock) {
                     accessMaintenanceLock.wait();
                 }
             } catch (InterruptedException e) {
@@ -169,24 +169,24 @@ public class MaintenanceThread extends Thread {
         }
     }
 
-    private void removePendingRequest(RobotRepresentation x){
+    private void removePendingRequest(RobotRepresentation x) {
         pendingRequests.remove(x);
         log(Type.M_LOW, "... pending \\ { " + x + " } = " + pendingRequests);
-        if (pendingRequests.size() == 0){
-            synchronized (accessMaintenanceLock){
+        if (pendingRequests.size() == 0) {
+            synchronized (accessMaintenanceLock) {
                 accessMaintenanceLock.notify();
             }
         }
     }
 
-    public boolean hasToWait(String otherRequestTimestamp){
+    public boolean hasToWait(String otherRequestTimestamp) {
         synchronized (structuresLock) {
             return usingMaintenance || (requestTimestamp != null &&
-                                        requestTimestamp < Long.parseLong(otherRequestTimestamp));
+                    requestTimestamp < Long.parseLong(otherRequestTimestamp));
         }
     }
 
-    public List<RobotRepresentation> getPendingRequestsCopy(){
+    public List<RobotRepresentation> getPendingRequestsCopy() {
         synchronized (structuresLock) {
             return (pendingRequests != null) ? new ArrayList<>(pendingRequests) : null;
         }

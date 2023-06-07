@@ -11,8 +11,8 @@ import common.printer.Type;
 import java.util.List;
 import java.util.Scanner;
 
-import static common.printer.Printer.*;
 import static common.Util.ADMIN_SERVER_ADDRESS;
+import static common.printer.Printer.*;
 
 public class AdminClientCLI {
 

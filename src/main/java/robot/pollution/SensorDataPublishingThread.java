@@ -1,13 +1,16 @@
 package robot.pollution;
 
-import common.printer.Type;
-import org.eclipse.paho.client.mqttv3.*;
 import com.google.gson.Gson;
+import common.printer.Type;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.time.LocalTime;
 import java.util.List;
 
-import static common.printer.Printer.*;
+import static common.printer.Printer.error;
+import static common.printer.Printer.log;
 
 public class SensorDataPublishingThread extends Thread {
 

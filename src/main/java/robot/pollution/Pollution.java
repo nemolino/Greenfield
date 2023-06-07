@@ -6,7 +6,8 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import robot.Robot;
 
 import static common.Util.MQTT_BROKER_ADDRESS;
-import static common.printer.Printer.*;
+import static common.printer.Printer.error;
+import static common.printer.Printer.log;
 
 public class Pollution {
 

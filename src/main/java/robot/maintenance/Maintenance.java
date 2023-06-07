@@ -13,7 +13,7 @@ public class Maintenance {
     private final Robot r;
     private MaintenanceThread t;
 
-    public Maintenance(Robot r){
+    public Maintenance(Robot r) {
         this.r = r;
     }
 
@@ -46,11 +46,11 @@ public class Maintenance {
         t.updatePendingMaintenanceRequestsById(id);
     }
 
-    public boolean hasToWait(String otherRequestTimestamp){
+    public boolean hasToWait(String otherRequestTimestamp) {
         return t.hasToWait(otherRequestTimestamp);
     }
 
-    public List<RobotRepresentation> getPendingRequestsCopy(){
+    public List<RobotRepresentation> getPendingRequestsCopy() {
         return t.getPendingRequestsCopy();
     }
 

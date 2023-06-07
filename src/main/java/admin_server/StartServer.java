@@ -1,12 +1,10 @@
 package admin_server;
 
-import static common.printer.Printer.*;
-
+import com.google.gson.Gson;
 import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;
 import common.printer.Type;
 import org.eclipse.paho.client.mqttv3.*;
-import com.google.gson.Gson;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import robot.pollution.PollutionMessageWithID;
 
@@ -16,6 +14,7 @@ import java.util.logging.Logger;
 
 import static common.Util.ADMIN_SERVER_ADDRESS;
 import static common.Util.MQTT_BROKER_ADDRESS;
+import static common.printer.Printer.*;
 
 public class StartServer {
 
@@ -46,10 +45,9 @@ public class StartServer {
                     PollutionMessageWithID msg = new Gson().fromJson(new String(message.getPayload()), PollutionMessageWithID.class);
                     log(Type.P, "... pollution data received from R_" + msg.getId() + " with timestamp " + msg.getTimestamp() + " on topic " + topic);
                     log(Type.P_LOW, "... robotID: " + msg.getId() + " , timestamp: " + msg.getTimestamp() + " , averages list: " + msg.getAverages());
-                    try{
+                    try {
                         SmartCity.getInstance().addPollutionData(msg.getId(), new PollutionMessage(msg.getTimestamp(), msg.getAverages()));
-                    }
-                    catch (RuntimeException e){
+                    } catch (RuntimeException e) {
                         warn(Type.P, "... " + e.getMessage());
                     }
                 }
@@ -58,7 +56,8 @@ public class StartServer {
                     error(Type.B, "... MQTT connection lost : " + cause.getMessage());
                 }
 
-                public void deliveryComplete(IMqttDeliveryToken token) {}
+                public void deliveryComplete(IMqttDeliveryToken token) {
+                }
             });
 
             for (String t : topics) {
@@ -66,7 +65,7 @@ public class StartServer {
                 log(Type.P, "... subscribed to topic " + t);
             }
 
-        } catch (MqttException me ) {
+        } catch (MqttException me) {
             error(Type.P, "... MQTT error in connection to broker : " + me.getMessage());
         }
 

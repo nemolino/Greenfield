@@ -12,7 +12,8 @@ import robot.Robot;
 
 import java.util.List;
 
-import static common.printer.Printer.*;
+import static common.printer.Printer.error;
+import static common.printer.Printer.log;
 
 public class HeartbeatThread extends Thread {
 
@@ -31,7 +32,7 @@ public class HeartbeatThread extends Thread {
         while (!stopCondition) {
 
             try {
-                synchronized (stopLock){
+                synchronized (stopLock) {
                     stopLock.wait(15000);
                 }
             } catch (InterruptedException e) {
@@ -76,7 +77,7 @@ public class HeartbeatThread extends Thread {
 
     public void stopMeGently() {
         stopCondition = true;
-        synchronized (stopLock){
+        synchronized (stopLock) {
             stopLock.notify();
         }
     }

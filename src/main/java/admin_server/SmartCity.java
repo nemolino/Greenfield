@@ -80,7 +80,7 @@ public class SmartCity {
         // removing robot
         for (Map.Entry<District, List<RobotRepresentation>> entry : registeredRobots.entrySet())
             for (RobotRepresentation x : entry.getValue())
-                if (Objects.equals(x.getId(), id)){
+                if (Objects.equals(x.getId(), id)) {
                     entry.getValue().remove(x);
                     return;
                 }
@@ -128,18 +128,17 @@ public class SmartCity {
         int taken = 0;
 
         logInline(Type.Q_LOW, "... summed values for query2 : ");
-        for (PollutionMessage x : Lists.reverse(l)){
+        for (PollutionMessage x : Lists.reverse(l)) {
             List<Double> averages = x.getAverages();
-            if (averages.size() <= remainingToTake){
-                for (double value : averages){
+            if (averages.size() <= remainingToTake) {
+                for (double value : averages) {
                     logInline(Type.Q_LOW, value + " ");
                     result += value;
                     taken++;
                 }
                 remainingToTake -= averages.size();
-            }
-            else{
-                for (double value : averages.subList(averages.size() - remainingToTake, averages.size())){
+            } else {
+                for (double value : averages.subList(averages.size() - remainingToTake, averages.size())) {
                     logInline(Type.Q_LOW, value + " ");
                     result += value;
                     taken++;
@@ -171,13 +170,13 @@ public class SmartCity {
         int n = 0;
 
         logInline(Type.Q_LOW, "... summed values for query3 : ");
-        for (Map.Entry<String, List<PollutionMessage>> entry : statsData.entrySet()){
-            for (PollutionMessage m : entry.getValue()){
+        for (Map.Entry<String, List<PollutionMessage>> entry : statsData.entrySet()) {
+            for (PollutionMessage m : entry.getValue()) {
                 if (m.getTimestamp() < t1)
                     continue;
                 if (m.getTimestamp() > t2)
                     break;
-                for (double value : m.getAverages()){
+                for (double value : m.getAverages()) {
                     logInline(Type.Q_LOW, value + " ");
                     result += value;
                     n++;

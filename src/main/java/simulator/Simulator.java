@@ -1,15 +1,14 @@
 package simulator;
 
-import java.util.Calendar;
 import java.util.Random;
 
 public abstract class Simulator extends Thread {
 
     protected volatile boolean stopCondition = false;
     protected Random rnd = new Random();
-    private Buffer buffer;
-    private String id;
-    private String type;
+    private final Buffer buffer;
+    private final String id;
+    private final String type;
 
     public Simulator(String id, String type, Buffer buffer) {
         this.id = id;

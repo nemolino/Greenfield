@@ -13,13 +13,13 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import robot.network.exceptions.RegistrationFailureException;
-import robot.network.exceptions.RemovalFailureException;
 import common.printer.Type;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import robot.Robot;
+import robot.network.exceptions.RegistrationFailureException;
+import robot.network.exceptions.RemovalFailureException;
 
 import java.rmi.server.ServerNotActiveException;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class Network {
 
     private final Robot r;
 
-    public Network(Robot r){
+    public Network(Robot r) {
         this.r = r;
     }
 
@@ -118,11 +118,7 @@ public class Network {
                     // not an error, but I want it red to make it visible
                     error(Type.N, "... " + x + " is dead [Network, presentation]");
                     removeDeadRobot(x);
-                    /*
-                    if (!channel.isTerminated())
-                        channel.shutdownNow();
-                    //channel.shutdownNow();
-                    */
+                    channel.shutdownNow();
                 }
 
                 public void onCompleted() {
@@ -160,12 +156,7 @@ public class Network {
                     // not an error, but I want it red to make it visible
                     error(Type.N, "... " + x + " is dead [Network, leaving]");
                     removeDeadRobot(x);
-                    /*
-                    //channel.shutdownNow();
-                    if (!channel.isTerminated())
-                        channel.shutdownNow();
-
-                     */
+                    channel.shutdownNow();
                 }
 
                 public void onCompleted() {

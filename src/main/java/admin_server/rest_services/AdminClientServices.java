@@ -1,8 +1,8 @@
 package admin_server.rest_services;
 
+import admin_server.SmartCity;
 import admin_server.rest_response_formats.ListRobotsResponse;
 import admin_server.rest_response_formats.RobotRepresentation;
-import admin_server.SmartCity;
 import common.printer.Type;
 
 import javax.ws.rs.GET;
@@ -13,7 +13,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
-import static common.printer.Printer.*;
+import static common.printer.Printer.log;
+import static common.printer.Printer.warn;
 
 @Path("query")
 public class AdminClientServices {

@@ -1,14 +1,15 @@
 package common;
 
-import java.util.Random;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Random;
 
 @XmlRootElement
 public class Position {
     private int x;
     private int y;
 
-    private Position() {}
+    private Position() {
+    }
 
     public Position(int x, int y) {
         this.x = x;
