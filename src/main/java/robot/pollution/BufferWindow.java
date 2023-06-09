@@ -20,7 +20,8 @@ public class BufferWindow implements simulator.Buffer {
     @Override
     synchronized public void addMeasurement(Measurement m) {
         l.add(m);
-        notify();
+        if (l.size() >= windowSize)
+            notify();
     }
 
     @Override
@@ -28,6 +29,7 @@ public class BufferWindow implements simulator.Buffer {
         while (l.size() < windowSize) {
             try {
                 wait();
+                System.out.println("notified - " + l);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

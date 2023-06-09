@@ -30,7 +30,6 @@ public class Robot {
     private Position position;
     private District district;
     private List<RobotRepresentation> otherRobots;
-    private final Object otherRobotsLock = new Object();
 
     private Network n;
     private Maintenance m;
@@ -79,8 +78,6 @@ public class Robot {
         /* --- (thread start) ---------- starting to organize with the other robots the access to the maintenance --- */
         m = new Maintenance(this);
         m.turnOnMaintenance();
-        HeartbeatThread h = new HeartbeatThread(this);
-        h.start();
 
         /* ------------------------------------------------------------------- CLI to give commands to this robot --- */
 
@@ -96,7 +93,6 @@ public class Robot {
 
                 /* --- (thread stop in a blocking way) ------------------------ completing maintenance operations --- */
                 m.turnOffMaintenance();
-                h.stopMeGently();
 
                 /* ------------------------------ notifying the other robots that I'm leaving Greenfield via gRPC --- */
                 n.leaving(id);
@@ -155,7 +151,7 @@ public class Robot {
     }
 
     public List<RobotRepresentation> getOtherRobotsCopy() {
-        synchronized (otherRobotsLock) {
+        synchronized (otherRobots) {
             return new ArrayList<>(otherRobots);
         }
     }
@@ -184,7 +180,7 @@ public class Robot {
 
     // add robot x to otherRobots, if it does not contain already a robot with the same id as x
     public void addToOtherRobots(RobotRepresentation x) {
-        synchronized (otherRobotsLock) {
+        synchronized (otherRobots) {
             for (RobotRepresentation y : otherRobots) {
                 if (Objects.equals(y.getId(), x.getId()))
                     return;
@@ -195,7 +191,7 @@ public class Robot {
 
     // remove from otherRobots a robot by its id, if present
     public void removeFromOtherRobotsById(String id) {
-        synchronized (otherRobotsLock) {
+        synchronized (otherRobots) {
             for (RobotRepresentation y : otherRobots)
                 if (Objects.equals(y.getId(), id)) {
                     otherRobots.remove(y);
@@ -208,13 +204,16 @@ public class Robot {
 
     private Server startServerGRPC() {
         try {
+            // shutting down some gRPC logs, I should investigate on this
             Logger grpcExecutorLogger = Logger.getLogger("io.grpc.internal.SerializingExecutor");
             grpcExecutorLogger.setLevel(Level.OFF);
+            Logger grpcManagedChannelOrphanWrapperLogger = Logger.getLogger("io.grpc.internal.ManagedChannelOrphanWrapper");
+            grpcManagedChannelOrphanWrapperLogger.setLevel(Level.OFF);
+
             Server s = ServerBuilder.forPort(listeningPort)
                     .addService(new PresentationServiceImpl(this))
                     .addService(new LeavingServiceImpl(this))
                     .addService(new MaintenanceServiceImpl(this))
-                    .addService(new HeartbeatServiceImpl())
                     .build();
             s.start();
             return s;
